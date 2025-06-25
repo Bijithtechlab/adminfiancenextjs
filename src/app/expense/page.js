@@ -7,6 +7,8 @@ export default function ExpensePage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [showForm, setShowForm] = useState(false);
+  const [editingId, setEditingId] = useState(null);
+  const [userRole, setUserRole] = useState('');
   const [events, setEvents] = useState([]);
   const [formData, setFormData] = useState({
     category: 'Maintenance',
@@ -39,6 +41,16 @@ export default function ExpensePage() {
   useEffect(() => {
     fetchExpenses();
     fetchEvents();
+    // Get user role from token
+    const token = localStorage.getItem('token');
+    if (token) {
+      try {
+        const payload = JSON.parse(atob(token.split('.')[1]));
+        setUserRole(payload.role);
+      } catch (err) {
+        console.error('Error parsing token:', err);
+      }
+    }
   }, []);
 
   const fetchExpenses = async () => {
@@ -86,8 +98,11 @@ export default function ExpensePage() {
     
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch('/api/expense', {
-        method: 'POST',
+      const url = editingId ? `/api/expense/${editingId}` : '/api/expense';
+      const method = editingId ? 'PUT' : 'POST';
+      
+      const response = await fetch(url, {
+        method,
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`
@@ -97,6 +112,7 @@ export default function ExpensePage() {
 
       if (response.ok) {
         setShowForm(false);
+        setEditingId(null);
         setFormData({
           category: 'Maintenance',
           amount: '',
@@ -109,12 +125,53 @@ export default function ExpensePage() {
         fetchExpenses();
       } else {
         const data = await response.json();
-        setError(data.message || 'Failed to create expense record');
+        setError(data.message || `Failed to ${editingId ? 'update' : 'create'} expense record`);
       }
     } catch (err) {
       setError('Network error');
     }
   };
+
+  const handleEdit = (expense) => {
+    setFormData({
+      category: expense.category,
+      amount: expense.amount,
+      date: expense.date.split('T')[0],
+      paidTo: expense.vendorName || '',
+      paymentMethod: expense.paymentMethod || 'Cash',
+      remarks: expense.description || '',
+      eventId: expense.eventId || ''
+    });
+    setEditingId(expense.id);
+    setShowForm(true);
+  };
+
+  const handleDelete = async (id) => {
+    if (!confirm('Are you sure you want to delete this expense record?')) {
+      return;
+    }
+
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch(`/api/expense/${id}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      if (response.ok) {
+        fetchExpenses();
+      } else {
+        const data = await response.json();
+        setError(data.message || 'Failed to delete expense record');
+      }
+    } catch (err) {
+      setError('Network error');
+    }
+  };
+
+  const canEditDelete = userRole === 'Admin' || userRole === 'Manager';
 
   if (loading) return <div className="p-4">Loading...</div>;
 
@@ -124,10 +181,26 @@ export default function ExpensePage() {
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl md:text-3xl font-bold">Expense Records</h1>
         <button
-          onClick={() => setShowForm(!showForm)}
+          onClick={() => {
+            if (showForm) {
+              setShowForm(false);
+              setEditingId(null);
+              setFormData({
+                category: 'Maintenance',
+                amount: '',
+                date: new Date().toISOString().split('T')[0],
+                paidTo: '',
+                paymentMethod: 'Cash',
+                remarks: '',
+                eventId: ''
+              });
+            } else {
+              setShowForm(true);
+            }
+          }}
           className="bg-red-500 text-white px-6 py-3 text-base rounded-lg hover:bg-red-600 min-h-[44px] touch-manipulation"
         >
-          {showForm ? 'Cancel' : 'Add Expense'}
+          {showForm ? 'Cancel' : (editingId ? 'Edit Expense' : 'Add Expense')}
         </button>
       </div>
 
@@ -139,7 +212,7 @@ export default function ExpensePage() {
 
       {showForm && (
         <div className="bg-white p-6 rounded-lg shadow-md mb-6">
-          <h2 className="text-xl font-semibold mb-4">Add New Expense</h2>
+          <h2 className="text-xl font-semibold mb-4">{editingId ? 'Edit Expense' : 'Add New Expense'}</h2>
           <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -247,7 +320,7 @@ export default function ExpensePage() {
                 type="submit"
                 className="bg-green-500 text-white px-6 py-3 rounded-lg hover:bg-green-600 min-h-[44px]"
               >
-                Save Expense
+                {editingId ? 'Update Expense' : 'Save Expense'}
               </button>
             </div>
           </form>
@@ -273,6 +346,11 @@ export default function ExpensePage() {
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Remarks
               </th>
+              {canEditDelete && (
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Actions
+                </th>
+              )}
             </tr>
           </thead>
           <tbody className="bg-white divide-y divide-gray-200">
@@ -293,6 +371,22 @@ export default function ExpensePage() {
                 <td className="px-6 py-4 text-sm text-gray-900 max-w-xs truncate">
                   {expense.description || '-'}
                 </td>
+                {canEditDelete && (
+                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                    <button
+                      onClick={() => handleEdit(expense)}
+                      className="text-blue-600 hover:text-blue-900 mr-3"
+                    >
+                      Edit
+                    </button>
+                    <button
+                      onClick={() => handleDelete(expense.id)}
+                      className="text-red-600 hover:text-red-900"
+                    >
+                      Delete
+                    </button>
+                  </td>
+                )}
               </tr>
             ))}
           </tbody>

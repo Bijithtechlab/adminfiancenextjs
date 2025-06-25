@@ -7,6 +7,8 @@ export default function EventsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [showForm, setShowForm] = useState(false);
+  const [editingId, setEditingId] = useState(null);
+  const [userRole, setUserRole] = useState('');
   const [formData, setFormData] = useState({
     name: '',
     description: '',
@@ -35,6 +37,16 @@ export default function EventsPage() {
 
   useEffect(() => {
     fetchEvents();
+    // Get user role from token
+    const token = localStorage.getItem('token');
+    if (token) {
+      try {
+        const payload = JSON.parse(atob(token.split('.')[1]));
+        setUserRole(payload.role);
+      } catch (err) {
+        console.error('Error parsing token:', err);
+      }
+    }
   }, []);
 
   const fetchEvents = async () => {
@@ -70,8 +82,11 @@ export default function EventsPage() {
     
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch('/api/events', {
-        method: 'POST',
+      const url = editingId ? `/api/events/${editingId}` : '/api/events';
+      const method = editingId ? 'PUT' : 'POST';
+      
+      const response = await fetch(url, {
+        method,
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`
@@ -81,6 +96,7 @@ export default function EventsPage() {
 
       if (response.ok) {
         setShowForm(false);
+        setEditingId(null);
         setFormData({
           name: '',
           description: '',
@@ -95,12 +111,53 @@ export default function EventsPage() {
       } else {
         const data = await response.json();
         console.error('Server error:', data);
-        setError(data.message || 'Failed to create event');
+        setError(data.message || `Failed to ${editingId ? 'update' : 'create'} event`);
       }
     } catch (err) {
       setError('Network error');
     }
   };
+
+  const handleEdit = (event) => {
+    setFormData({
+      name: event.name,
+      description: event.description || '',
+      startDate: event.date.split('T')[0],
+      endDate: event.date.split('T')[0],
+      budget: event.budget || '',
+      type: event.type || 'general',
+      status: event.status || 'planned'
+    });
+    setEditingId(event.id);
+    setShowForm(true);
+  };
+
+  const handleDelete = async (id) => {
+    if (!confirm('Are you sure you want to delete this event?')) {
+      return;
+    }
+
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch(`/api/events/${id}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      if (response.ok) {
+        fetchEvents();
+      } else {
+        const data = await response.json();
+        setError(data.message || 'Failed to delete event');
+      }
+    } catch (err) {
+      setError('Network error');
+    }
+  };
+
+  const canEditDelete = userRole === 'Admin' || userRole === 'Manager';
 
   if (loading) return <div className="p-4">Loading...</div>;
 
@@ -110,10 +167,26 @@ export default function EventsPage() {
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl md:text-3xl font-bold">Events</h1>
         <button
-          onClick={() => setShowForm(!showForm)}
+          onClick={() => {
+            if (showForm) {
+              setShowForm(false);
+              setEditingId(null);
+              setFormData({
+                name: '',
+                description: '',
+                startDate: new Date().toISOString().split('T')[0],
+                endDate: new Date(Date.now() + 24*60*60*1000).toISOString().split('T')[0],
+                budget: '',
+                type: 'general',
+                status: 'planned'
+              });
+            } else {
+              setShowForm(true);
+            }
+          }}
           className="bg-purple-500 text-white px-6 py-3 text-base rounded-lg hover:bg-purple-600 min-h-[44px] touch-manipulation"
         >
-          {showForm ? 'Cancel' : 'Add Event'}
+          {showForm ? 'Cancel' : (editingId ? 'Edit Event' : 'Add Event')}
         </button>
       </div>
 
@@ -125,7 +198,7 @@ export default function EventsPage() {
 
       {showForm && (
         <div className="bg-white p-6 rounded-lg shadow-md mb-6">
-          <h2 className="text-xl font-semibold mb-4">Add New Event</h2>
+          <h2 className="text-xl font-semibold mb-4">{editingId ? 'Edit Event' : 'Add New Event'}</h2>
           <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="md:col-span-2">
               <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -210,7 +283,7 @@ export default function EventsPage() {
                 type="submit"
                 className="bg-green-500 text-white px-6 py-3 rounded-lg hover:bg-green-600 min-h-[44px]"
               >
-                Save Event
+                {editingId ? 'Update Event' : 'Save Event'}
               </button>
             </div>
           </form>
@@ -248,6 +321,11 @@ export default function EventsPage() {
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Balance
               </th>
+              {canEditDelete && (
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Actions
+                </th>
+              )}
             </tr>
           </thead>
           <tbody className="bg-white divide-y divide-gray-200">
@@ -289,6 +367,22 @@ export default function EventsPage() {
                 }`}>
                   ₹{parseFloat(event.balance || 0).toLocaleString()}
                 </td>
+                {canEditDelete && (
+                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                    <button
+                      onClick={() => handleEdit(event)}
+                      className="text-blue-600 hover:text-blue-900 mr-3"
+                    >
+                      Edit
+                    </button>
+                    <button
+                      onClick={() => handleDelete(event.id)}
+                      className="text-red-600 hover:text-red-900"
+                    >
+                      Delete
+                    </button>
+                  </td>
+                )}
               </tr>
             ))}
           </tbody>

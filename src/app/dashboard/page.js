@@ -5,7 +5,7 @@ export default function DashboardPage() {
   const [dashboardData, setDashboardData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [dateRange, setDateRange] = useState('1year');
+  const [dateRange, setDateRange] = useState('year');
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
 

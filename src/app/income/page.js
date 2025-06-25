@@ -6,6 +6,8 @@ export default function IncomePage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [showForm, setShowForm] = useState(false);
+  const [editingId, setEditingId] = useState(null);
+  const [userRole, setUserRole] = useState('');
   const [formData, setFormData] = useState({
     donorName: '',
     houseName: '',
@@ -23,6 +25,16 @@ export default function IncomePage() {
   useEffect(() => {
     fetchIncomes();
     fetchEvents();
+    // Get user role from token
+    const token = localStorage.getItem('token');
+    if (token) {
+      try {
+        const payload = JSON.parse(atob(token.split('.')[1]));
+        setUserRole(payload.role);
+      } catch (err) {
+        console.error('Error parsing token:', err);
+      }
+    }
   }, []);
 
   const fetchEvents = async () => {
@@ -70,8 +82,11 @@ export default function IncomePage() {
     
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch('/api/income', {
-        method: 'POST',
+      const url = editingId ? `/api/income/${editingId}` : '/api/income';
+      const method = editingId ? 'PUT' : 'POST';
+      
+      const response = await fetch(url, {
+        method,
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`
@@ -81,6 +96,7 @@ export default function IncomePage() {
 
       if (response.ok) {
         setShowForm(false);
+        setEditingId(null);
         setFormData({
           donorName: '',
           houseName: '',
@@ -96,12 +112,56 @@ export default function IncomePage() {
         fetchIncomes();
       } else {
         const data = await response.json();
-        setError(data.message || 'Failed to create income record');
+        setError(data.message || `Failed to ${editingId ? 'update' : 'create'} income record`);
       }
     } catch (err) {
       setError('Network error');
     }
   };
+
+  const handleEdit = (income) => {
+    setFormData({
+      donorName: income.donorName,
+      houseName: income.houseName || '',
+      address: income.address || '',
+      phoneNumber: income.phoneNumber || '',
+      amount: income.amount,
+      date: income.date.split('T')[0],
+      description: income.description || '',
+      donationType: income.donationType,
+      eventId: income.eventId || '',
+      receiptNumber: income.receiptNumber || ''
+    });
+    setEditingId(income.id);
+    setShowForm(true);
+  };
+
+  const handleDelete = async (id) => {
+    if (!confirm('Are you sure you want to delete this income record?')) {
+      return;
+    }
+
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch(`/api/income/${id}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      if (response.ok) {
+        fetchIncomes();
+      } else {
+        const data = await response.json();
+        setError(data.message || 'Failed to delete income record');
+      }
+    } catch (err) {
+      setError('Network error');
+    }
+  };
+
+  const canEditDelete = userRole === 'Admin' || userRole === 'Manager';
 
   if (loading) return <div className="p-8">Loading...</div>;
 
@@ -110,10 +170,29 @@ export default function IncomePage() {
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-3xl font-bold">Income Records</h1>
         <button
-          onClick={() => setShowForm(!showForm)}
+          onClick={() => {
+            if (showForm) {
+              setShowForm(false);
+              setEditingId(null);
+              setFormData({
+                donorName: '',
+                houseName: '',
+                address: '',
+                phoneNumber: '',
+                amount: '',
+                date: new Date().toISOString().split('T')[0],
+                description: '',
+                donationType: 'general',
+                eventId: '',
+                receiptNumber: ''
+              });
+            } else {
+              setShowForm(true);
+            }
+          }}
           className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
         >
-          {showForm ? 'Cancel' : 'Add Income'}
+          {showForm ? 'Cancel' : (editingId ? 'Edit Income' : 'Add Income')}
         </button>
       </div>
 
@@ -125,7 +204,7 @@ export default function IncomePage() {
 
       {showForm && (
         <div className="bg-white p-6 rounded-lg shadow-md mb-6">
-          <h2 className="text-xl font-semibold mb-4">Add New Income</h2>
+          <h2 className="text-xl font-semibold mb-4">{editingId ? 'Edit Income' : 'Add New Income'}</h2>
           <form onSubmit={handleSubmit} className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -261,7 +340,7 @@ export default function IncomePage() {
                 type="submit"
                 className="bg-green-500 text-white px-6 py-2 rounded hover:bg-green-600"
               >
-                Save Income
+                {editingId ? 'Update Income' : 'Save Income'}
               </button>
             </div>
           </form>
@@ -296,6 +375,11 @@ export default function IncomePage() {
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Description
               </th>
+              {canEditDelete && (
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Actions
+                </th>
+              )}
             </tr>
           </thead>
           <tbody className="bg-white divide-y divide-gray-200">
@@ -325,6 +409,22 @@ export default function IncomePage() {
                 <td className="px-6 py-4 text-sm text-gray-900 max-w-xs truncate">
                   {income.description || '-'}
                 </td>
+                {canEditDelete && (
+                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                    <button
+                      onClick={() => handleEdit(income)}
+                      className="text-blue-600 hover:text-blue-900 mr-3"
+                    >
+                      Edit
+                    </button>
+                    <button
+                      onClick={() => handleDelete(income.id)}
+                      className="text-red-600 hover:text-red-900"
+                    >
+                      Delete
+                    </button>
+                  </td>
+                )}
               </tr>
             ))}
           </tbody>
