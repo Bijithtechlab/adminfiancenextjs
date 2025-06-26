@@ -24,7 +24,7 @@ export default function IncomePage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [filteredIncomes, setFilteredIncomes] = useState([]);
   const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage] = useState(25);
+  const [itemsPerPage] = useState(10);
   const [showCompact, setShowCompact] = useState(true);
 
   useEffect(() => {
@@ -426,7 +426,6 @@ export default function IncomePage() {
                   <div className="flex justify-between items-start mb-2">
                     <div>
                       <h3 className="font-medium text-gray-900">{income.donorName}</h3>
-                      <p className="text-sm text-gray-500">{income.houseName || ''}</p>
                     </div>
                     <span className="text-lg font-semibold text-green-600">
                       ₹{parseFloat(income.amount).toLocaleString()}

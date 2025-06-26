@@ -13,7 +13,7 @@ export default function ExpensePage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [filteredExpenses, setFilteredExpenses] = useState([]);
   const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage] = useState(25);
+  const [itemsPerPage] = useState(20);
   const [showCompact, setShowCompact] = useState(true);
   const [formData, setFormData] = useState({
     category: 'Maintenance',
