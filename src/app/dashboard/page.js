@@ -80,16 +80,16 @@ export default function DashboardPage() {
   if (error) return <div className="p-8 text-red-600">{error}</div>;
 
   return (
-    <div className="p-8">
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-3xl font-bold">Dashboard</h1>
+    <div className="p-4 sm:p-6 lg:p-8">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
+        <h1 className="text-2xl sm:text-3xl font-bold">Dashboard</h1>
         
         {/* Date Range Filter */}
-        <div className="flex gap-4 items-center">
+        <div className="flex flex-col sm:flex-row gap-2 sm:gap-4 items-start sm:items-center w-full sm:w-auto">
           <select
             value={dateRange}
             onChange={(e) => setDateRange(e.target.value)}
-            className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full sm:w-auto px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
           >
             <option value="today">Today</option>
             <option value="week">This Week</option>
@@ -101,41 +101,41 @@ export default function DashboardPage() {
           </select>
           
           {dateRange === 'custom' && (
-            <>
+            <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
               <input
                 type="date"
                 value={startDate}
                 onChange={(e) => setStartDate(e.target.value)}
-                className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full sm:w-auto px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
               />
               <input
                 type="date"
                 value={endDate}
                 onChange={(e) => setEndDate(e.target.value)}
-                className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full sm:w-auto px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
               />
-            </>
+            </div>
           )}
         </div>
       </div>
 
       {/* Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-        <div className="bg-green-50 p-6 rounded-lg shadow-md">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 mb-6 sm:mb-8">
+        <div className="bg-green-50 p-4 sm:p-6 rounded-lg shadow-md">
           <h3 className="text-lg font-semibold text-green-900 mb-2">Total Income</h3>
-          <p className="text-3xl font-bold text-green-600">
+          <p className="text-2xl sm:text-3xl font-bold text-green-600">
             ₹{dashboardData?.summary?.totalIncome?.toLocaleString() || '0'}
           </p>
         </div>
         
-        <div className="bg-red-50 p-6 rounded-lg shadow-md">
+        <div className="bg-red-50 p-4 sm:p-6 rounded-lg shadow-md">
           <h3 className="text-lg font-semibold text-red-900 mb-2">Total Expense</h3>
-          <p className="text-3xl font-bold text-red-600">
+          <p className="text-2xl sm:text-3xl font-bold text-red-600">
             ₹{dashboardData?.summary?.totalExpense?.toLocaleString() || '0'}
           </p>
         </div>
         
-        <div className={`p-6 rounded-lg shadow-md ${
+        <div className={`p-4 sm:p-6 rounded-lg shadow-md sm:col-span-2 lg:col-span-1 ${
           (dashboardData?.summary?.balance || 0) >= 0 ? 'bg-blue-50' : 'bg-yellow-50'
         }`}>
           <h3 className={`text-lg font-semibold mb-2 ${
@@ -143,7 +143,7 @@ export default function DashboardPage() {
           }`}>
             Balance
           </h3>
-          <p className={`text-3xl font-bold ${
+          <p className={`text-2xl sm:text-3xl font-bold ${
             (dashboardData?.summary?.balance || 0) >= 0 ? 'text-blue-600' : 'text-yellow-600'
           }`}>
             ₹{dashboardData?.summary?.balance?.toLocaleString() || '0'}

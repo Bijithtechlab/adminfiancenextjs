@@ -358,7 +358,8 @@ export default function ExpensePage() {
         </div>
       )}
 
-      <div className="bg-white rounded-lg shadow-md overflow-hidden mobile-table">
+      <div className="bg-white rounded-lg shadow-md overflow-hidden">
+        <div className="overflow-x-auto">
         <table className="min-w-full">
           <thead className="bg-gray-50">
             <tr>
@@ -424,6 +425,7 @@ export default function ExpensePage() {
             ))}
           </tbody>
         </table>
+        </div>
       </div>
     </div>
     </PageGuard>

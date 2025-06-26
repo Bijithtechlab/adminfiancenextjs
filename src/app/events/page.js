@@ -182,16 +182,16 @@ export default function EventsPage() {
   return (
     <PageGuard requiredPage="events">
       <div className="p-4 pb-20 md:p-8 md:pb-8">
-      <div className="flex justify-between items-center mb-6">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
         <h1 className="text-2xl md:text-3xl font-bold">Events</h1>
-        <div className="flex gap-4 items-center">
+        <div className="flex flex-col sm:flex-row gap-2 sm:gap-4 items-stretch sm:items-center w-full sm:w-auto">
           {!showForm && (
             <input
               type="text"
               placeholder="Search by name, status, or description..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500 w-64"
+              className="w-full sm:w-64 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm"
             />
           )}
         <button
@@ -320,6 +320,7 @@ export default function EventsPage() {
       )}
 
       <div className="bg-white rounded-lg shadow-md overflow-hidden">
+        <div className="overflow-x-auto">
         <table className="min-w-full">
           <thead className="bg-gray-50">
             <tr>
@@ -407,6 +408,7 @@ export default function EventsPage() {
             ))}
           </tbody>
         </table>
+        </div>
       </div>
     </div>
     </PageGuard>

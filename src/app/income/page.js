@@ -378,6 +378,7 @@ export default function IncomePage() {
       )}
 
       <div className="bg-white rounded-lg shadow-md overflow-hidden">
+        <div className="overflow-x-auto">
         <table className="min-w-full">
           <thead className="bg-gray-50">
             <tr>
@@ -453,6 +454,7 @@ export default function IncomePage() {
             ))}
           </tbody>
         </table>
+        </div>
       </div>
     </div>
   );
