@@ -364,7 +364,7 @@ export default function ExpensePage() {
           <thead className="bg-gray-50">
             <tr>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Category
+                Paid To
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Amount
@@ -373,7 +373,7 @@ export default function ExpensePage() {
                 Date
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Paid To
+                Event Name
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Remarks
@@ -389,7 +389,7 @@ export default function ExpensePage() {
             {filteredExpenses.map((expense) => (
               <tr key={expense.id}>
                 <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                  {expense.category}
+                  {expense.vendorName || '-'}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                   ₹{parseFloat(expense.amount).toLocaleString()}
@@ -398,7 +398,10 @@ export default function ExpensePage() {
                   {new Date(expense.date).toLocaleDateString()}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                  {expense.vendorName || '-'}
+                  {expense.eventId ? 
+                    events.find(event => event.id === expense.eventId)?.name || '-' 
+                    : '-'
+                  }
                 </td>
                 <td className="px-6 py-4 text-sm text-gray-900 max-w-xs truncate">
                   {expense.description || '-'}

@@ -378,7 +378,47 @@ export default function IncomePage() {
       )}
 
       <div className="bg-white rounded-lg shadow-md overflow-hidden">
-        <div className="overflow-x-auto">
+        {/* Mobile Card View */}
+        <div className="block sm:hidden">
+          {filteredIncomes.map((income) => (
+            <div key={income.id} className="border-b border-gray-200 p-4">
+              <div className="flex justify-between items-start mb-2">
+                <div>
+                  <h3 className="font-medium text-gray-900">{income.donorName}</h3>
+                  <p className="text-sm text-gray-500">{income.houseName || ''}</p>
+                </div>
+                <span className="text-lg font-semibold text-green-600">
+                  ₹{parseFloat(income.amount).toLocaleString()}
+                </span>
+              </div>
+              <div className="grid grid-cols-2 gap-2 text-sm text-gray-600">
+                <div>📞 {income.phoneNumber || '-'}</div>
+                <div>📅 {new Date(income.date).toLocaleDateString()}</div>
+                <div>🎪 {income.eventId ? events.find(event => event.id === income.eventId)?.name || '-' : '-'}</div>
+                <div>🧾 {income.receiptNumber || '-'}</div>
+              </div>
+              {canEditDelete && (
+                <div className="flex gap-2 mt-3">
+                  <button
+                    onClick={() => handleEdit(income)}
+                    className="flex-1 bg-blue-50 text-blue-600 py-2 px-3 rounded text-sm font-medium"
+                  >
+                    ✏️ Edit
+                  </button>
+                  <button
+                    onClick={() => handleDelete(income.id)}
+                    className="flex-1 bg-red-50 text-red-600 py-2 px-3 rounded text-sm font-medium"
+                  >
+                    🗑️ Delete
+                  </button>
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+        
+        {/* Desktop Table View */}
+        <div className="hidden sm:block overflow-x-auto">
         <table className="min-w-full">
           <thead className="bg-gray-50">
             <tr>
