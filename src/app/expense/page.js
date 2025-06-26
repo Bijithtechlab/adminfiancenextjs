@@ -12,6 +12,9 @@ export default function ExpensePage() {
   const [events, setEvents] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [filteredExpenses, setFilteredExpenses] = useState([]);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage] = useState(10);
+  const [showCompact, setShowCompact] = useState(false);
   const [formData, setFormData] = useState({
     category: 'Maintenance',
     amount: '',
@@ -359,7 +362,109 @@ export default function ExpensePage() {
       )}
 
       <div className="bg-white rounded-lg shadow-md overflow-hidden">
-        <div className="overflow-x-auto">
+        {/* Mobile Controls */}
+        <div className="block sm:hidden p-4 bg-gray-50 border-b">
+          <div className="flex justify-between items-center mb-2">
+            <span className="text-sm text-gray-600">
+              {filteredExpenses.length} records
+            </span>
+            <button
+              onClick={() => setShowCompact(!showCompact)}
+              className="text-sm bg-red-100 text-red-600 px-3 py-1 rounded"
+            >
+              {showCompact ? '📋 Detailed' : '📱 Compact'}
+            </button>
+          </div>
+        </div>
+        
+        {/* Mobile Card View */}
+        <div className="block sm:hidden">
+          {filteredExpenses
+            .slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage)
+            .map((expense) => (
+            <div key={expense.id} className={`border-b border-gray-200 ${showCompact ? 'p-2' : 'p-4'}`}>
+              {showCompact ? (
+                // Compact View
+                <div className="flex justify-between items-center">
+                  <div className="flex-1">
+                    <div className="font-medium text-sm text-gray-900">{expense.vendorName || 'N/A'}</div>
+                    <div className="text-xs text-gray-500">
+                      {new Date(expense.date).toLocaleDateString()} • ₹{parseFloat(expense.amount).toLocaleString()}
+                    </div>
+                  </div>
+                  {canEditDelete && (
+                    <button
+                      onClick={() => handleEdit(expense)}
+                      className="ml-2 text-blue-600 p-1"
+                    >
+                      ✏️
+                    </button>
+                  )}
+                </div>
+              ) : (
+                // Detailed View
+                <>
+                  <div className="flex justify-between items-start mb-2">
+                    <div>
+                      <h3 className="font-medium text-gray-900">{expense.vendorName || 'N/A'}</h3>
+                      <p className="text-sm text-gray-500">{expense.category}</p>
+                    </div>
+                    <span className="text-lg font-semibold text-red-600">
+                      ₹{parseFloat(expense.amount).toLocaleString()}
+                    </span>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2 text-sm text-gray-600">
+                    <div>📅 {new Date(expense.date).toLocaleDateString()}</div>
+                    <div>🎪 {expense.eventId ? events.find(event => event.id === expense.eventId)?.name || '-' : '-'}</div>
+                    <div className="col-span-2">📝 {expense.description || '-'}</div>
+                  </div>
+                  {canEditDelete && (
+                    <div className="flex gap-2 mt-3">
+                      <button
+                        onClick={() => handleEdit(expense)}
+                        className="flex-1 bg-blue-50 text-blue-600 py-2 px-3 rounded text-sm font-medium"
+                      >
+                        ✏️ Edit
+                      </button>
+                      <button
+                        onClick={() => handleDelete(expense.id)}
+                        className="flex-1 bg-red-50 text-red-600 py-2 px-3 rounded text-sm font-medium"
+                      >
+                        🗑️ Delete
+                      </button>
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
+          ))}
+          
+          {/* Mobile Pagination */}
+          {filteredExpenses.length > itemsPerPage && (
+            <div className="p-4 bg-gray-50 flex justify-between items-center">
+              <button
+                onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                disabled={currentPage === 1}
+                className="px-3 py-1 bg-red-500 text-white rounded disabled:bg-gray-300 text-sm"
+              >
+                ← Prev
+              </button>
+              <span className="text-sm text-gray-600">
+                Page {currentPage} of {Math.ceil(filteredExpenses.length / itemsPerPage)}
+              </span>
+              <button
+                onClick={() => setCurrentPage(prev => Math.min(prev + 1, Math.ceil(filteredExpenses.length / itemsPerPage)))}
+                disabled={currentPage === Math.ceil(filteredExpenses.length / itemsPerPage)}
+                className="px-3 py-1 bg-red-500 text-white rounded disabled:bg-gray-300 text-sm"
+              >
+                Next →
+              </button>
+            </div>
+          )}
+        </div>
+        
+        {/* Desktop Table View */}
+        <div className="hidden sm:block overflow-x-auto">
         <table className="min-w-full">
           <thead className="bg-gray-50">
             <tr>
@@ -429,8 +534,8 @@ export default function ExpensePage() {
           </tbody>
         </table>
         </div>
+        </div>
       </div>
-    </div>
     </PageGuard>
   );
 }

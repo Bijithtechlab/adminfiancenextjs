@@ -320,7 +320,57 @@ export default function EventsPage() {
       )}
 
       <div className="bg-white rounded-lg shadow-md overflow-hidden">
-        <div className="overflow-x-auto">
+        {/* Mobile Card View */}
+        <div className="block sm:hidden">
+          {filteredEvents.map((event) => (
+            <div key={event.id} className="border-b border-gray-200 p-4">
+              <div className="flex justify-between items-start mb-2">
+                <div>
+                  <h3 className="font-medium text-gray-900">{event.name}</h3>
+                  <p className="text-sm text-gray-500">{event.type || 'General'}</p>
+                </div>
+                <span className={`px-2 py-1 text-xs rounded-full ${
+                  event.status === 'completed' ? 'bg-green-100 text-green-800' :
+                  event.status === 'in progress' ? 'bg-blue-100 text-blue-800' :
+                  event.status === 'cancelled' ? 'bg-red-100 text-red-800' :
+                  'bg-yellow-100 text-yellow-800'
+                }`}>
+                  {event.status?.charAt(0).toUpperCase() + event.status?.slice(1)}
+                </span>
+              </div>
+              <div className="grid grid-cols-2 gap-2 text-sm text-gray-600 mb-2">
+                <div>📅 {new Date(event.date).toLocaleDateString()}</div>
+                <div>💰 {event.budget ? `₹${parseFloat(event.budget).toLocaleString()}` : '-'}</div>
+                <div className="text-green-600">💵 ₹{parseFloat(event.total_income || 0).toLocaleString()}</div>
+                <div className="text-red-600">💸 ₹{parseFloat(event.total_expense || 0).toLocaleString()}</div>
+              </div>
+              <div className={`text-sm font-medium mb-2 ${
+                parseFloat(event.balance || 0) >= 0 ? 'text-green-600' : 'text-red-600'
+              }`}>
+                Balance: ₹{parseFloat(event.balance || 0).toLocaleString()}
+              </div>
+              {canEditDelete && (
+                <div className="flex gap-2 mt-3">
+                  <button
+                    onClick={() => handleEdit(event)}
+                    className="flex-1 bg-blue-50 text-blue-600 py-2 px-3 rounded text-sm font-medium"
+                  >
+                    ✏️ Edit
+                  </button>
+                  <button
+                    onClick={() => handleDelete(event.id)}
+                    className="flex-1 bg-red-50 text-red-600 py-2 px-3 rounded text-sm font-medium"
+                  >
+                    🗑️ Delete
+                  </button>
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+        
+        {/* Desktop Table View */}
+        <div className="hidden sm:block overflow-x-auto">
         <table className="min-w-full">
           <thead className="bg-gray-50">
             <tr>
@@ -409,8 +459,8 @@ export default function EventsPage() {
           </tbody>
         </table>
         </div>
+        </div>
       </div>
-    </div>
     </PageGuard>
   );
 }

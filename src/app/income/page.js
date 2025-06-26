@@ -23,6 +23,9 @@ export default function IncomePage() {
   const [events, setEvents] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [filteredIncomes, setFilteredIncomes] = useState([]);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage] = useState(10);
+  const [showCompact, setShowCompact] = useState(false);
 
   useEffect(() => {
     fetchIncomes();
@@ -378,43 +381,106 @@ export default function IncomePage() {
       )}
 
       <div className="bg-white rounded-lg shadow-md overflow-hidden">
+        {/* Mobile Controls */}
+        <div className="block sm:hidden p-4 bg-gray-50 border-b">
+          <div className="flex justify-between items-center mb-2">
+            <span className="text-sm text-gray-600">
+              {filteredIncomes.length} records
+            </span>
+            <button
+              onClick={() => setShowCompact(!showCompact)}
+              className="text-sm bg-blue-100 text-blue-600 px-3 py-1 rounded"
+            >
+              {showCompact ? '📋 Detailed' : '📱 Compact'}
+            </button>
+          </div>
+        </div>
+        
         {/* Mobile Card View */}
         <div className="block sm:hidden">
-          {filteredIncomes.map((income) => (
-            <div key={income.id} className="border-b border-gray-200 p-4">
-              <div className="flex justify-between items-start mb-2">
-                <div>
-                  <h3 className="font-medium text-gray-900">{income.donorName}</h3>
-                  <p className="text-sm text-gray-500">{income.houseName || ''}</p>
+          {filteredIncomes
+            .slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage)
+            .map((income) => (
+            <div key={income.id} className={`border-b border-gray-200 ${showCompact ? 'p-2' : 'p-4'}`}>
+              {showCompact ? (
+                // Compact View
+                <div className="flex justify-between items-center">
+                  <div className="flex-1">
+                    <div className="font-medium text-sm text-gray-900">{income.donorName}</div>
+                    <div className="text-xs text-gray-500">
+                      {new Date(income.date).toLocaleDateString()} • ₹{parseFloat(income.amount).toLocaleString()}
+                    </div>
+                  </div>
+                  {canEditDelete && (
+                    <button
+                      onClick={() => handleEdit(income)}
+                      className="ml-2 text-blue-600 p-1"
+                    >
+                      ✏️
+                    </button>
+                  )}
                 </div>
-                <span className="text-lg font-semibold text-green-600">
-                  ₹{parseFloat(income.amount).toLocaleString()}
-                </span>
-              </div>
-              <div className="grid grid-cols-2 gap-2 text-sm text-gray-600">
-                <div>📞 {income.phoneNumber || '-'}</div>
-                <div>📅 {new Date(income.date).toLocaleDateString()}</div>
-                <div>🎪 {income.eventId ? events.find(event => event.id === income.eventId)?.name || '-' : '-'}</div>
-                <div>🧾 {income.receiptNumber || '-'}</div>
-              </div>
-              {canEditDelete && (
-                <div className="flex gap-2 mt-3">
-                  <button
-                    onClick={() => handleEdit(income)}
-                    className="flex-1 bg-blue-50 text-blue-600 py-2 px-3 rounded text-sm font-medium"
-                  >
-                    ✏️ Edit
-                  </button>
-                  <button
-                    onClick={() => handleDelete(income.id)}
-                    className="flex-1 bg-red-50 text-red-600 py-2 px-3 rounded text-sm font-medium"
-                  >
-                    🗑️ Delete
-                  </button>
-                </div>
+              ) : (
+                // Detailed View
+                <>
+                  <div className="flex justify-between items-start mb-2">
+                    <div>
+                      <h3 className="font-medium text-gray-900">{income.donorName}</h3>
+                      <p className="text-sm text-gray-500">{income.houseName || ''}</p>
+                    </div>
+                    <span className="text-lg font-semibold text-green-600">
+                      ₹{parseFloat(income.amount).toLocaleString()}
+                    </span>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2 text-sm text-gray-600">
+                    <div>📞 {income.phoneNumber || '-'}</div>
+                    <div>📅 {new Date(income.date).toLocaleDateString()}</div>
+                    <div>🎪 {income.eventId ? events.find(event => event.id === income.eventId)?.name || '-' : '-'}</div>
+                    <div>🧾 {income.receiptNumber || '-'}</div>
+                  </div>
+                  {canEditDelete && (
+                    <div className="flex gap-2 mt-3">
+                      <button
+                        onClick={() => handleEdit(income)}
+                        className="flex-1 bg-blue-50 text-blue-600 py-2 px-3 rounded text-sm font-medium"
+                      >
+                        ✏️ Edit
+                      </button>
+                      <button
+                        onClick={() => handleDelete(income.id)}
+                        className="flex-1 bg-red-50 text-red-600 py-2 px-3 rounded text-sm font-medium"
+                      >
+                        🗑️ Delete
+                      </button>
+                    </div>
+                  )}
+                </>
               )}
             </div>
           ))}
+          
+          {/* Mobile Pagination */}
+          {filteredIncomes.length > itemsPerPage && (
+            <div className="p-4 bg-gray-50 flex justify-between items-center">
+              <button
+                onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                disabled={currentPage === 1}
+                className="px-3 py-1 bg-blue-500 text-white rounded disabled:bg-gray-300 text-sm"
+              >
+                ← Prev
+              </button>
+              <span className="text-sm text-gray-600">
+                Page {currentPage} of {Math.ceil(filteredIncomes.length / itemsPerPage)}
+              </span>
+              <button
+                onClick={() => setCurrentPage(prev => Math.min(prev + 1, Math.ceil(filteredIncomes.length / itemsPerPage)))}
+                disabled={currentPage === Math.ceil(filteredIncomes.length / itemsPerPage)}
+                className="px-3 py-1 bg-blue-500 text-white rounded disabled:bg-gray-300 text-sm"
+              >
+                Next →
+              </button>
+            </div>
+          )}
         </div>
         
         {/* Desktop Table View */}
