@@ -10,6 +10,8 @@ export default function ExpensePage() {
   const [editingId, setEditingId] = useState(null);
   const [userRole, setUserRole] = useState('');
   const [events, setEvents] = useState([]);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [filteredExpenses, setFilteredExpenses] = useState([]);
   const [formData, setFormData] = useState({
     category: 'Maintenance',
     amount: '',
@@ -46,6 +48,8 @@ export default function ExpensePage() {
     if (token) {
       try {
         const payload = JSON.parse(atob(token.split('.')[1]));
+        console.log('Token payload:', payload);
+        console.log('User role:', payload.role);
         setUserRole(payload.role);
       } catch (err) {
         console.error('Error parsing token:', err);
@@ -65,6 +69,7 @@ export default function ExpensePage() {
       if (response.ok) {
         const data = await response.json();
         setExpenses(data.expenses);
+        setFilteredExpenses(data.expenses);
       } else {
         setError('Failed to fetch expense records');
       }
@@ -171,7 +176,22 @@ export default function ExpensePage() {
     }
   };
 
-  const canEditDelete = userRole === 'Admin' || userRole === 'Manager';
+  const canEditDelete = userRole === 'Admin' || userRole === 'Manager' || userRole === 'admin' || userRole === 'manager';
+
+  // Filter expenses based on search term
+  useEffect(() => {
+    if (!searchTerm) {
+      setFilteredExpenses(expenses);
+    } else {
+      const filtered = expenses.filter(expense => 
+        expense.category.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (expense.vendorName && expense.vendorName.toLowerCase().includes(searchTerm.toLowerCase())) ||
+        (expense.description && expense.description.toLowerCase().includes(searchTerm.toLowerCase()))
+      );
+      setFilteredExpenses(filtered);
+    }
+  }, [expenses, searchTerm]);
+  console.log('Current userRole:', userRole, 'canEditDelete:', canEditDelete);
 
   if (loading) return <div className="p-4">Loading...</div>;
 
@@ -180,6 +200,16 @@ export default function ExpensePage() {
       <div className="p-4 pb-20 md:p-8 md:pb-8">
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl md:text-3xl font-bold">Expense Records</h1>
+        <div className="flex gap-4 items-center">
+          {!showForm && (
+            <input
+              type="text"
+              placeholder="Search by category, vendor, or remarks..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500 w-64"
+            />
+          )}
         <button
           onClick={() => {
             if (showForm) {
@@ -202,6 +232,7 @@ export default function ExpensePage() {
         >
           {showForm ? 'Cancel' : (editingId ? 'Edit Expense' : 'Add Expense')}
         </button>
+        </div>
       </div>
 
       {error && (
@@ -354,7 +385,7 @@ export default function ExpensePage() {
             </tr>
           </thead>
           <tbody className="bg-white divide-y divide-gray-200">
-            {expenses.map((expense) => (
+            {filteredExpenses.map((expense) => (
               <tr key={expense.id}>
                 <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
                   {expense.category}
@@ -375,15 +406,17 @@ export default function ExpensePage() {
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                     <button
                       onClick={() => handleEdit(expense)}
-                      className="text-blue-600 hover:text-blue-900 mr-3"
+                      className="hover:bg-gray-100 p-1 rounded mr-1 text-lg"
+                      title="Edit"
                     >
-                      Edit
+                      ✏️
                     </button>
                     <button
                       onClick={() => handleDelete(expense.id)}
-                      className="text-red-600 hover:text-red-900"
+                      className="hover:bg-gray-100 p-1 rounded text-lg"
+                      title="Delete"
                     >
-                      Delete
+                      🗑️
                     </button>
                   </td>
                 )}

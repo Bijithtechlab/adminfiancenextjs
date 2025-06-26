@@ -19,45 +19,18 @@ async function getUserFromRequest(request) {
 export async function GET(request) {
   try {
     const user = await getUserFromRequest(request);
-    const { searchParams } = new URL(request.url);
     
-    const category = searchParams.get('category');
-    const name = searchParams.get('name');
-
-    let query = 'SELECT * FROM inventory';
-    const conditions = [];
-    const values = [];
-    let paramIndex = 1;
-    
-    if (category) {
-      conditions.push(`category = $${paramIndex}`);
-      values.push(category);
-      paramIndex++;
-    }
-
-    if (name) {
-      conditions.push(`name ILIKE $${paramIndex}`);
-      values.push(`%${name}%`);
-      paramIndex++;
-    }
-
-    if (conditions.length > 0) {
-      query += ' WHERE ' + conditions.join(' AND ');
-    }
-    
-    query += ' ORDER BY name ASC';
-
-    const result = await db.query(query, values);
+    const query = 'SELECT * FROM inventory ORDER BY created_at DESC';
+    const result = await db.query(query);
 
     const transformedItems = result.rows.map(item => ({
       id: item.id,
-      name: item.name,
-      category: item.category,
+      name: item.item_name,
       quantity: item.quantity,
       unit: item.unit,
+      value: item.value,
       description: item.description,
       purchaseDate: item.purchase_date,
-      purchasePrice: item.purchase_price,
       createdAt: item.created_at,
       updatedAt: item.updated_at
     }));
@@ -78,60 +51,51 @@ export async function POST(request) {
     const user = await getUserFromRequest(request);
     const body = await request.json();
     
-    const {
-      name,
-      category,
-      quantity,
-      unit,
-      description,
-      purchaseDate,
-      purchasePrice
-    } = body;
+    const { name, quantity, unit, description, purchasePrice, purchaseDate } = body;
 
-    const timestamp = new Date().toISOString();
+    if (!name) {
+      return NextResponse.json(
+        { message: 'Item name is required' },
+        { status: 400 }
+      );
+    }
+
     const id = uuidv4();
+    const timestamp = new Date().toISOString();
 
     const query = `
-      INSERT INTO inventory (
-        id, name, category, quantity, unit, description, 
-        purchase_date, purchase_price, created_at, updated_at
-      ) 
+      INSERT INTO inventory (id, user_id, item_name, quantity, unit, value, description, purchase_date, created_at, updated_at) 
       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
       RETURNING *
     `;
     
     const values = [
       id,
+      user.id,
       name,
-      category,
       parseInt(quantity) || 1,
-      unit,
+      unit || 'pieces',
+      purchasePrice ? parseFloat(purchasePrice) : 0,
       description || '',
       purchaseDate || null,
-      purchasePrice ? parseFloat(purchasePrice) : null,
       timestamp,
       timestamp
     ];
 
     const result = await db.query(query, values);
     const newItem = result.rows[0];
-    
-    const transformedItem = {
-      id: newItem.id,
-      name: newItem.name,
-      category: newItem.category,
-      quantity: newItem.quantity,
-      unit: newItem.unit,
-      description: newItem.description,
-      purchaseDate: newItem.purchase_date,
-      purchasePrice: newItem.purchase_price,
-      createdAt: newItem.created_at,
-      updatedAt: newItem.updated_at
-    };
 
     return NextResponse.json({
       message: 'Inventory item created successfully',
-      item: transformedItem
+      item: {
+        id: newItem.id,
+        name: newItem.item_name,
+        quantity: newItem.quantity,
+        unit: newItem.unit,
+        value: newItem.value,
+        description: newItem.description,
+        purchaseDate: newItem.purchase_date
+      }
     }, { status: 201 });
   } catch (error) {
     console.error('Create inventory error:', error);

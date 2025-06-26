@@ -1,5 +1,26 @@
 'use client';
 import { useState, useEffect } from 'react';
+import {
+  Chart as ChartJS,
+  CategoryScale,
+  LinearScale,
+  BarElement,
+  Title,
+  Tooltip,
+  Legend,
+  ArcElement,
+} from 'chart.js';
+import { Bar, Pie } from 'react-chartjs-2';
+
+ChartJS.register(
+  CategoryScale,
+  LinearScale,
+  BarElement,
+  Title,
+  Tooltip,
+  Legend,
+  ArcElement
+);
 
 export default function DashboardPage() {
   const [dashboardData, setDashboardData] = useState(null);
@@ -101,14 +122,14 @@ export default function DashboardPage() {
       {/* Summary Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
         <div className="bg-green-50 p-6 rounded-lg shadow-md">
-          <h3 className="text-lg font-semibold text-green-800 mb-2">Total Income</h3>
+          <h3 className="text-lg font-semibold text-green-900 mb-2">Total Income</h3>
           <p className="text-3xl font-bold text-green-600">
             ₹{dashboardData?.summary?.totalIncome?.toLocaleString() || '0'}
           </p>
         </div>
         
         <div className="bg-red-50 p-6 rounded-lg shadow-md">
-          <h3 className="text-lg font-semibold text-red-800 mb-2">Total Expense</h3>
+          <h3 className="text-lg font-semibold text-red-900 mb-2">Total Expense</h3>
           <p className="text-3xl font-bold text-red-600">
             ₹{dashboardData?.summary?.totalExpense?.toLocaleString() || '0'}
           </p>
@@ -118,7 +139,7 @@ export default function DashboardPage() {
           (dashboardData?.summary?.balance || 0) >= 0 ? 'bg-blue-50' : 'bg-yellow-50'
         }`}>
           <h3 className={`text-lg font-semibold mb-2 ${
-            (dashboardData?.summary?.balance || 0) >= 0 ? 'text-blue-800' : 'text-yellow-800'
+            (dashboardData?.summary?.balance || 0) >= 0 ? 'text-blue-900' : 'text-yellow-900'
           }`}>
             Balance
           </h3>
@@ -130,18 +151,99 @@ export default function DashboardPage() {
         </div>
       </div>
 
+      {/* Charts Section */}
+      <div className="mb-8">
+        {/* Income vs Expense by Event Bar Chart */}
+        <div className="bg-white rounded-lg shadow-md p-6">
+          <h3 className="text-xl font-semibold mb-4 text-gray-900">Income vs Expense by Event</h3>
+          <div className="h-64 w-full">
+            <Bar
+              data={{
+                labels: dashboardData?.eventFinancials?.map(event => event.name) || ['No Events'],
+                datasets: [
+                  {
+                    label: 'Income',
+                    data: dashboardData?.eventFinancials?.map(event => event.income) || [0],
+                    backgroundColor: 'rgba(34, 197, 94, 0.8)',
+                    borderColor: 'rgba(34, 197, 94, 1)',
+                    borderWidth: 1,
+                  },
+                  {
+                    label: 'Expense',
+                    data: dashboardData?.eventFinancials?.map(event => event.expense) || [0],
+                    backgroundColor: 'rgba(239, 68, 68, 0.8)',
+                    borderColor: 'rgba(239, 68, 68, 1)',
+                    borderWidth: 1,
+                  },
+                ],
+              }}
+              options={{
+                responsive: true,
+                maintainAspectRatio: false,
+                layout: {
+                  padding: {
+                    top: 10,
+                    bottom: 10
+                  }
+                },
+                plugins: {
+                  legend: {
+                    position: 'top',
+                    labels: {
+                      boxWidth: 12,
+                      padding: 15
+                    }
+                  },
+                },
+                scales: {
+                  y: {
+                    beginAtZero: true,
+                    grid: {
+                      display: true
+                    },
+                    ticks: {
+                      callback: function(value) {
+                        return '₹' + value.toLocaleString();
+                      }
+                    }
+                  },
+                  x: {
+                    grid: {
+                      display: false
+                    },
+                    ticks: {
+                      maxRotation: 0,
+                      minRotation: 0,
+                      maxTicksLimit: 10,
+                      font: {
+                        size: 11
+                      }
+                    }
+                  }
+                },
+              }}
+            />
+          </div>
+        </div>
+      </div>
+
       {/* Recent Transactions */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         {/* Recent Income */}
         <div className="bg-white rounded-lg shadow-md p-6">
-          <h3 className="text-xl font-semibold mb-4">Recent Income</h3>
+          <h3 className="text-xl font-semibold mb-4 text-gray-900">Recent Income</h3>
           <div className="space-y-3">
             {dashboardData?.recentIncome?.length > 0 ? (
               dashboardData.recentIncome.map((income) => (
                 <div key={income.id} className="flex justify-between items-center p-3 bg-green-50 rounded">
                   <div>
-                    <p className="font-medium">{income.donorName}</p>
-                    <p className="text-sm text-gray-600">{income.donationType}</p>
+                    <p className="font-medium text-gray-900">{income.donorName}</p>
+                    <p className="text-sm text-gray-600">
+                      {income.eventId && dashboardData.allEvents ? 
+                        dashboardData.allEvents.find(event => event.id === income.eventId)?.name || income.donationType
+                        : income.donationType
+                      }
+                    </p>
                   </div>
                   <div className="text-right">
                     <p className="font-semibold text-green-600">₹{parseFloat(income.amount).toLocaleString()}</p>
@@ -157,14 +259,19 @@ export default function DashboardPage() {
 
         {/* Recent Expenses */}
         <div className="bg-white rounded-lg shadow-md p-6">
-          <h3 className="text-xl font-semibold mb-4">Recent Expenses</h3>
+          <h3 className="text-xl font-semibold mb-4 text-gray-900">Recent Expenses</h3>
           <div className="space-y-3">
             {dashboardData?.recentExpense?.length > 0 ? (
               dashboardData.recentExpense.map((expense) => (
                 <div key={expense.id} className="flex justify-between items-center p-3 bg-red-50 rounded">
                   <div>
-                    <p className="font-medium">{expense.vendorName}</p>
-                    <p className="text-sm text-gray-600">{expense.category}</p>
+                    <p className="font-medium text-gray-900">{expense.vendorName}</p>
+                    <p className="text-sm text-gray-600">
+                      {expense.eventId && dashboardData.allEvents ? 
+                        dashboardData.allEvents.find(event => event.id === expense.eventId)?.name || expense.category
+                        : expense.category
+                      }
+                    </p>
                   </div>
                   <div className="text-right">
                     <p className="font-semibold text-red-600">₹{parseFloat(expense.amount).toLocaleString()}</p>
@@ -179,10 +286,12 @@ export default function DashboardPage() {
         </div>
       </div>
 
+
+
       {/* Events Summary */}
       {dashboardData?.events && Object.keys(dashboardData.events).length > 0 && (
         <div className="mt-8 bg-white rounded-lg shadow-md p-6">
-          <h3 className="text-xl font-semibold mb-4">Events Summary</h3>
+          <h3 className="text-xl font-semibold mb-4 text-gray-900">Events Summary</h3>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             {Object.entries(dashboardData.events).map(([status, count]) => (
               <div key={status} className="text-center p-4 bg-gray-50 rounded">

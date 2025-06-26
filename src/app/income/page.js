@@ -21,6 +21,8 @@ export default function IncomePage() {
     receiptNumber: ''
   });
   const [events, setEvents] = useState([]);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [filteredIncomes, setFilteredIncomes] = useState([]);
 
   useEffect(() => {
     fetchIncomes();
@@ -30,6 +32,7 @@ export default function IncomePage() {
     if (token) {
       try {
         const payload = JSON.parse(atob(token.split('.')[1]));
+
         setUserRole(payload.role);
       } catch (err) {
         console.error('Error parsing token:', err);
@@ -67,6 +70,7 @@ export default function IncomePage() {
       if (response.ok) {
         const data = await response.json();
         setIncomes(data.incomes);
+        setFilteredIncomes(data.incomes);
       } else {
         setError('Failed to fetch income records');
       }
@@ -161,7 +165,22 @@ export default function IncomePage() {
     }
   };
 
-  const canEditDelete = userRole === 'Admin' || userRole === 'Manager';
+  const canEditDelete = userRole === 'Admin' || userRole === 'Manager' || userRole === 'admin' || userRole === 'manager';
+
+  // Filter incomes based on search term
+  useEffect(() => {
+    if (!searchTerm) {
+      setFilteredIncomes(incomes);
+    } else {
+      const filtered = incomes.filter(income => 
+        income.donorName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (income.houseName && income.houseName.toLowerCase().includes(searchTerm.toLowerCase())) ||
+        income.donationType.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (income.receiptNumber && income.receiptNumber.toLowerCase().includes(searchTerm.toLowerCase()))
+      );
+      setFilteredIncomes(filtered);
+    }
+  }, [incomes, searchTerm]);
 
   if (loading) return <div className="p-8">Loading...</div>;
 
@@ -169,6 +188,16 @@ export default function IncomePage() {
     <div className="p-8">
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-3xl font-bold">Income Records</h1>
+        <div className="flex gap-4 items-center">
+          {!showForm && (
+            <input
+              type="text"
+              placeholder="Search by donor, house, type, or receipt..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 w-64"
+            />
+          )}
         <button
           onClick={() => {
             if (showForm) {
@@ -194,6 +223,7 @@ export default function IncomePage() {
         >
           {showForm ? 'Cancel' : (editingId ? 'Edit Income' : 'Add Income')}
         </button>
+        </div>
       </div>
 
       {error && (
@@ -215,7 +245,7 @@ export default function IncomePage() {
                 required
                 value={formData.donorName}
                 onChange={(e) => setFormData({...formData, donorName: e.target.value})}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 bg-white"
               />
             </div>
             <div>
@@ -226,7 +256,7 @@ export default function IncomePage() {
                 type="text"
                 value={formData.houseName}
                 onChange={(e) => setFormData({...formData, houseName: e.target.value})}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 bg-white"
               />
             </div>
             <div>
@@ -236,7 +266,7 @@ export default function IncomePage() {
               <textarea
                 value={formData.address}
                 onChange={(e) => setFormData({...formData, address: e.target.value})}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 bg-white"
                 rows="2"
               />
             </div>
@@ -248,7 +278,7 @@ export default function IncomePage() {
                 type="tel"
                 value={formData.phoneNumber}
                 onChange={(e) => setFormData({...formData, phoneNumber: e.target.value})}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 bg-white"
               />
             </div>
             <div>
@@ -261,7 +291,7 @@ export default function IncomePage() {
                 required
                 value={formData.amount}
                 onChange={(e) => setFormData({...formData, amount: e.target.value})}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 bg-white"
                 placeholder="₹"
               />
             </div>
@@ -274,7 +304,7 @@ export default function IncomePage() {
                 required
                 value={formData.date}
                 onChange={(e) => setFormData({...formData, date: e.target.value})}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 bg-white"
               />
             </div>
             <div>
@@ -284,7 +314,7 @@ export default function IncomePage() {
               <select
                 value={formData.donationType}
                 onChange={(e) => setFormData({...formData, donationType: e.target.value})}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 bg-white"
               >
                 <option value="general">General Donation</option>
                 <option value="pooja">Pooja Offering</option>
@@ -301,7 +331,7 @@ export default function IncomePage() {
               <select
                 value={formData.eventId}
                 onChange={(e) => setFormData({...formData, eventId: e.target.value})}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 bg-white"
               >
                 <option value="">None</option>
                 {events
@@ -321,7 +351,7 @@ export default function IncomePage() {
                 type="text"
                 value={formData.receiptNumber}
                 onChange={(e) => setFormData({...formData, receiptNumber: e.target.value})}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 bg-white"
               />
             </div>
             <div className="col-span-2">
@@ -331,7 +361,7 @@ export default function IncomePage() {
               <textarea
                 value={formData.description}
                 onChange={(e) => setFormData({...formData, description: e.target.value})}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 bg-white"
                 rows="3"
               />
             </div>
@@ -351,77 +381,71 @@ export default function IncomePage() {
         <table className="min-w-full">
           <thead className="bg-gray-50">
             <tr>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Donor Name
+              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Donor
               </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                House Name
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Phone
               </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Amount
               </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Date
               </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Type
+              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Event
               </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Receipt #
               </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Description
-              </th>
               {canEditDelete && (
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Actions
                 </th>
               )}
             </tr>
           </thead>
           <tbody className="bg-white divide-y divide-gray-200">
-            {incomes.map((income) => (
+            {filteredIncomes.map((income) => (
               <tr key={income.id}>
-                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                  {income.donorName}
+                <td className="px-4 py-4 text-sm font-medium text-gray-900">
+                  <div className="font-medium">{income.donorName}</div>
+                  <div className="text-xs text-gray-500">{income.houseName || ''}</div>
                 </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                  {income.houseName || '-'}
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900">
                   {income.phoneNumber || '-'}
                 </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900">
                   ₹{parseFloat(income.amount).toLocaleString()}
                 </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900">
                   {new Date(income.date).toLocaleDateString()}
                 </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                  {income.donationType}
+                <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900">
+                  {income.eventId ? 
+                    events.find(event => event.id === income.eventId)?.name || '-' 
+                    : '-'
+                  }
                 </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900">
                   {income.receiptNumber || '-'}
                 </td>
-                <td className="px-6 py-4 text-sm text-gray-900 max-w-xs truncate">
-                  {income.description || '-'}
-                </td>
                 {canEditDelete && (
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                  <td className="px-4 py-4 whitespace-nowrap text-sm font-medium">
                     <button
                       onClick={() => handleEdit(income)}
-                      className="text-blue-600 hover:text-blue-900 mr-3"
+                      className="hover:bg-gray-100 p-1 rounded mr-1 text-lg"
+                      title="Edit"
                     >
-                      Edit
+                      ✏️
                     </button>
                     <button
                       onClick={() => handleDelete(income.id)}
-                      className="text-red-600 hover:text-red-900"
+                      className="hover:bg-gray-100 p-1 rounded text-lg"
+                      title="Delete"
                     >
-                      Delete
+                      🗑️
                     </button>
                   </td>
                 )}

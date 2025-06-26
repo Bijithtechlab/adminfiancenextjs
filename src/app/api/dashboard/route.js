@@ -69,6 +69,34 @@ export async function GET(request) {
     const eventsQuery = `SELECT COUNT(*) as total, status FROM events GROUP BY status`;
     const eventsResult = await db.query(eventsQuery);
 
+    // Get all events for lookup
+    const allEventsQuery = `SELECT id, name FROM events`;
+    const allEventsResult = await db.query(allEventsQuery);
+
+    // Get event-wise financial data
+    const eventFinancialsQuery = `
+      SELECT 
+        e.id,
+        e.name,
+        COALESCE(i.total_income, 0) as income,
+        COALESCE(ex.total_expense, 0) as expense
+      FROM events e
+      LEFT JOIN (
+        SELECT event_id, SUM(amount) as total_income 
+        FROM income 
+        WHERE event_id IS NOT NULL ${dateCondition ? 'AND ' + dateCondition.replace('WHERE ', '') : ''}
+        GROUP BY event_id
+      ) i ON e.id = i.event_id
+      LEFT JOIN (
+        SELECT event_id, SUM(amount) as total_expense 
+        FROM expense 
+        WHERE event_id IS NOT NULL ${dateCondition ? 'AND ' + dateCondition.replace('WHERE ', '') : ''}
+        GROUP BY event_id
+      ) ex ON e.id = ex.event_id
+      ORDER BY e.name
+    `;
+    const eventFinancialsResult = await db.query(eventFinancialsQuery, dateParams);
+
     // Get monthly income/expense for chart
     const monthlyQuery = `
       SELECT 
@@ -97,14 +125,26 @@ export async function GET(request) {
         donorName: income.donor_name,
         amount: income.amount,
         date: income.date,
-        donationType: income.donation_type
+        donationType: income.donation_type,
+        eventId: income.event_id
       })),
       recentExpense: recentExpenseResult.rows.map(expense => ({
         id: expense.id,
         vendorName: expense.vendor_name,
         amount: expense.amount,
         date: expense.date,
-        category: expense.category
+        category: expense.category,
+        eventId: expense.event_id
+      })),
+      allEvents: allEventsResult.rows.map(event => ({
+        id: event.id,
+        name: event.name
+      })),
+      eventFinancials: eventFinancialsResult.rows.map(event => ({
+        id: event.id,
+        name: event.name,
+        income: parseFloat(event.income) || 0,
+        expense: parseFloat(event.expense) || 0
       })),
       events: eventsResult.rows.reduce((acc, row) => {
         acc[row.status] = parseInt(row.total);

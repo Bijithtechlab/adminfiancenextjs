@@ -9,6 +9,8 @@ export default function EventsPage() {
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState(null);
   const [userRole, setUserRole] = useState('');
+  const [searchTerm, setSearchTerm] = useState('');
+  const [filteredEvents, setFilteredEvents] = useState([]);
   const [formData, setFormData] = useState({
     name: '',
     description: '',
@@ -42,6 +44,7 @@ export default function EventsPage() {
     if (token) {
       try {
         const payload = JSON.parse(atob(token.split('.')[1]));
+
         setUserRole(payload.role);
       } catch (err) {
         console.error('Error parsing token:', err);
@@ -61,6 +64,7 @@ export default function EventsPage() {
       if (response.ok) {
         const data = await response.json();
         setEvents(data.events);
+        setFilteredEvents(data.events);
       } else {
         setError('Failed to fetch events');
       }
@@ -157,7 +161,21 @@ export default function EventsPage() {
     }
   };
 
-  const canEditDelete = userRole === 'Admin' || userRole === 'Manager';
+  const canEditDelete = userRole === 'Admin' || userRole === 'Manager' || userRole === 'admin' || userRole === 'manager';
+
+  // Filter events based on search term
+  useEffect(() => {
+    if (!searchTerm) {
+      setFilteredEvents(events);
+    } else {
+      const filtered = events.filter(event => 
+        event.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (event.status && event.status.toLowerCase().includes(searchTerm.toLowerCase())) ||
+        (event.description && event.description.toLowerCase().includes(searchTerm.toLowerCase()))
+      );
+      setFilteredEvents(filtered);
+    }
+  }, [events, searchTerm]);
 
   if (loading) return <div className="p-4">Loading...</div>;
 
@@ -166,6 +184,16 @@ export default function EventsPage() {
       <div className="p-4 pb-20 md:p-8 md:pb-8">
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl md:text-3xl font-bold">Events</h1>
+        <div className="flex gap-4 items-center">
+          {!showForm && (
+            <input
+              type="text"
+              placeholder="Search by name, status, or description..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500 w-64"
+            />
+          )}
         <button
           onClick={() => {
             if (showForm) {
@@ -188,6 +216,7 @@ export default function EventsPage() {
         >
           {showForm ? 'Cancel' : (editingId ? 'Edit Event' : 'Add Event')}
         </button>
+        </div>
       </div>
 
       {error && (
@@ -290,60 +319,49 @@ export default function EventsPage() {
         </div>
       )}
 
-      <div className="bg-white rounded-lg shadow-md overflow-hidden mobile-table">
+      <div className="bg-white rounded-lg shadow-md overflow-hidden">
         <table className="min-w-full">
           <thead className="bg-gray-50">
             <tr>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Event Name
+              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Event
               </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Start Date
+              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Date
               </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                End Date
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Type
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Status
               </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Budget
               </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Income
               </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Expense
               </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Balance
               </th>
               {canEditDelete && (
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Actions
                 </th>
               )}
             </tr>
           </thead>
           <tbody className="bg-white divide-y divide-gray-200">
-            {events.map((event) => (
+            {filteredEvents.map((event) => (
               <tr key={event.id}>
-                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                  {event.name}
+                <td className="px-4 py-4 text-sm font-medium text-gray-900">
+                  <div className="font-medium">{event.name}</div>
+                  <div className="text-xs text-gray-500">{event.type || 'General'}</div>
                 </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900">
                   {new Date(event.date).toLocaleDateString()}
                 </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                  {new Date(event.date).toLocaleDateString()}
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                  General
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900">
                   <span className={`px-2 py-1 text-xs rounded-full ${
                     event.status === 'completed' ? 'bg-green-100 text-green-800' :
                     event.status === 'in progress' ? 'bg-blue-100 text-blue-800' :
@@ -353,33 +371,35 @@ export default function EventsPage() {
                     {event.status?.charAt(0).toUpperCase() + event.status?.slice(1)}
                   </span>
                 </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900">
                   {event.budget ? `₹${parseFloat(event.budget).toLocaleString()}` : '-'}
                 </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-green-600">
+                <td className="px-4 py-4 whitespace-nowrap text-sm text-green-600">
                   ₹{parseFloat(event.total_income || 0).toLocaleString()}
                 </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-red-600">
+                <td className="px-4 py-4 whitespace-nowrap text-sm text-red-600">
                   ₹{parseFloat(event.total_expense || 0).toLocaleString()}
                 </td>
-                <td className={`px-6 py-4 whitespace-nowrap text-sm font-medium ${
+                <td className={`px-4 py-4 whitespace-nowrap text-sm font-medium ${
                   parseFloat(event.balance || 0) >= 0 ? 'text-green-600' : 'text-red-600'
                 }`}>
                   ₹{parseFloat(event.balance || 0).toLocaleString()}
                 </td>
                 {canEditDelete && (
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                  <td className="px-4 py-4 whitespace-nowrap text-sm font-medium">
                     <button
                       onClick={() => handleEdit(event)}
-                      className="text-blue-600 hover:text-blue-900 mr-3"
+                      className="hover:bg-gray-100 p-1 rounded mr-1 text-lg"
+                      title="Edit"
                     >
-                      Edit
+                      ✏️
                     </button>
                     <button
                       onClick={() => handleDelete(event.id)}
-                      className="text-red-600 hover:text-red-900"
+                      className="hover:bg-gray-100 p-1 rounded text-lg"
+                      title="Delete"
                     >
-                      Delete
+                      🗑️
                     </button>
                   </td>
                 )}

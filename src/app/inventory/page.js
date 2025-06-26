@@ -7,9 +7,10 @@ export default function InventoryPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [showForm, setShowForm] = useState(false);
+  const [editingId, setEditingId] = useState(null);
+  const [userRole, setUserRole] = useState('');
   const [formData, setFormData] = useState({
     name: '',
-    category: 'Pooja Items',
     quantity: '1',
     unit: 'Pieces',
     description: '',
@@ -41,6 +42,16 @@ export default function InventoryPage() {
 
   useEffect(() => {
     fetchInventory();
+    // Get user role from token
+    const token = localStorage.getItem('token');
+    if (token) {
+      try {
+        const payload = JSON.parse(atob(token.split('.')[1]));
+        setUserRole(payload.role);
+      } catch (err) {
+        console.error('Error parsing token:', err);
+      }
+    }
   }, []);
 
   const fetchInventory = async () => {
@@ -70,8 +81,11 @@ export default function InventoryPage() {
     
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch('/api/inventory', {
-        method: 'POST',
+      const url = editingId ? `/api/inventory/${editingId}` : '/api/inventory';
+      const method = editingId ? 'PUT' : 'POST';
+      
+      const response = await fetch(url, {
+        method,
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`
@@ -81,9 +95,9 @@ export default function InventoryPage() {
 
       if (response.ok) {
         setShowForm(false);
+        setEditingId(null);
         setFormData({
           name: '',
-          category: 'Pooja Items',
           quantity: '1',
           unit: 'Pieces',
           description: '',
@@ -94,12 +108,52 @@ export default function InventoryPage() {
         setError('');
       } else {
         const data = await response.json();
-        setError(data.message || 'Failed to create inventory item');
+        setError(data.message || `Failed to ${editingId ? 'update' : 'create'} inventory item`);
       }
     } catch (err) {
       setError('Network error');
     }
   };
+
+  const handleEdit = (item) => {
+    setFormData({
+      name: item.name,
+      quantity: item.quantity.toString(),
+      unit: item.unit,
+      description: item.description || '',
+      purchaseDate: item.purchaseDate ? item.purchaseDate.split('T')[0] : '',
+      purchasePrice: item.value ? item.value.toString() : ''
+    });
+    setEditingId(item.id);
+    setShowForm(true);
+  };
+
+  const handleDelete = async (id) => {
+    if (!confirm('Are you sure you want to delete this inventory item?')) {
+      return;
+    }
+
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch(`/api/inventory/${id}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      if (response.ok) {
+        fetchInventory();
+      } else {
+        const data = await response.json();
+        setError(data.message || 'Failed to delete inventory item');
+      }
+    } catch (err) {
+      setError('Network error');
+    }
+  };
+
+  const canEditDelete = userRole === 'Admin' || userRole === 'Manager' || userRole === 'admin' || userRole === 'manager';
 
   if (loading) return <div className="p-4">Loading...</div>;
 
@@ -109,10 +163,25 @@ export default function InventoryPage() {
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl md:text-3xl font-bold">Inventory Management</h1>
         <button
-          onClick={() => setShowForm(!showForm)}
+          onClick={() => {
+            if (showForm) {
+              setShowForm(false);
+              setEditingId(null);
+              setFormData({
+                name: '',
+                quantity: '1',
+                unit: 'Pieces',
+                description: '',
+                purchaseDate: '',
+                purchasePrice: ''
+              });
+            } else {
+              setShowForm(true);
+            }
+          }}
           className="bg-green-500 text-white px-6 py-3 text-base rounded-lg hover:bg-green-600 min-h-[44px] touch-manipulation"
         >
-          {showForm ? 'Cancel' : 'Add Item'}
+          {showForm ? 'Cancel' : (editingId ? 'Edit Item' : 'Add Item')}
         </button>
       </div>
 
@@ -124,7 +193,7 @@ export default function InventoryPage() {
 
       {showForm && (
         <div className="bg-white p-6 rounded-lg shadow-md mb-6">
-          <h2 className="text-xl font-semibold mb-4">Add New Inventory Item</h2>
+          <h2 className="text-xl font-semibold mb-4">{editingId ? 'Edit Inventory Item' : 'Add New Inventory Item'}</h2>
           <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -138,23 +207,7 @@ export default function InventoryPage() {
                 className="w-full px-4 py-3 text-base text-gray-900 bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
               />
             </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Category *
-              </label>
-              <select
-                required
-                value={formData.category}
-                onChange={(e) => setFormData({...formData, category: e.target.value})}
-                className="w-full px-4 py-3 text-base text-gray-900 bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
-              >
-                {inventoryCategories.map((category) => (
-                  <option key={category} value={category}>
-                    {category}
-                  </option>
-                ))}
-              </select>
-            </div>
+
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Quantity *
@@ -185,6 +238,7 @@ export default function InventoryPage() {
                 ))}
               </select>
             </div>
+
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Purchase Date (Optional)
@@ -226,7 +280,7 @@ export default function InventoryPage() {
                 type="submit"
                 className="bg-blue-500 text-white px-6 py-3 rounded-lg hover:bg-blue-600 min-h-[44px]"
               >
-                Save Item
+                {editingId ? 'Update Item' : 'Save Item'}
               </button>
             </div>
           </form>
@@ -241,9 +295,6 @@ export default function InventoryPage() {
                 Item Name
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Category
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Quantity
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -253,11 +304,16 @@ export default function InventoryPage() {
                 Purchase Date
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Purchase Price
+                Value
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Description
               </th>
+              {canEditDelete && (
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Actions
+                </th>
+              )}
             </tr>
           </thead>
           <tbody className="bg-white divide-y divide-gray-200">
@@ -265,11 +321,6 @@ export default function InventoryPage() {
               <tr key={item.id}>
                 <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
                   {item.name}
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                  <span className="px-2 py-1 text-xs rounded-full bg-blue-100 text-blue-800">
-                    {item.category}
-                  </span>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                   {item.quantity}
@@ -281,11 +332,29 @@ export default function InventoryPage() {
                   {item.purchaseDate ? new Date(item.purchaseDate).toLocaleDateString() : '-'}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                  {item.purchasePrice ? `₹${parseFloat(item.purchasePrice).toLocaleString()}` : '-'}
+                  {item.value ? `₹${parseFloat(item.value).toLocaleString()}` : '-'}
                 </td>
                 <td className="px-6 py-4 text-sm text-gray-900 max-w-xs truncate">
                   {item.description || '-'}
                 </td>
+                {canEditDelete && (
+                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                    <button
+                      onClick={() => handleEdit(item)}
+                      className="hover:bg-gray-100 p-1 rounded mr-1 text-lg"
+                      title="Edit"
+                    >
+                      ✏️
+                    </button>
+                    <button
+                      onClick={() => handleDelete(item.id)}
+                      className="hover:bg-gray-100 p-1 rounded text-lg"
+                      title="Delete"
+                    >
+                      🗑️
+                    </button>
+                  </td>
+                )}
               </tr>
             ))}
           </tbody>
