@@ -14,7 +14,7 @@ export default function ExpensePage() {
   const [filteredExpenses, setFilteredExpenses] = useState([]);
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage] = useState(25);
-  const [showCompact, setShowCompact] = useState(false);
+  const [showCompact, setShowCompact] = useState(true);
   const [formData, setFormData] = useState({
     category: 'Maintenance',
     amount: '',

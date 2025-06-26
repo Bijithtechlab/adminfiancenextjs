@@ -25,7 +25,7 @@ export default function IncomePage() {
   const [filteredIncomes, setFilteredIncomes] = useState([]);
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage] = useState(25);
-  const [showCompact, setShowCompact] = useState(false);
+  const [showCompact, setShowCompact] = useState(true);
 
   useEffect(() => {
     fetchIncomes();
@@ -433,10 +433,11 @@ export default function IncomePage() {
                     </span>
                   </div>
                   <div className="grid grid-cols-2 gap-2 text-sm text-gray-600">
+                    <div>🏠 {income.houseName || '-'}</div>
                     <div>📞 {income.phoneNumber || '-'}</div>
                     <div>📅 {new Date(income.date).toLocaleDateString()}</div>
                     <div>🎪 {income.eventId ? events.find(event => event.id === income.eventId)?.name || '-' : '-'}</div>
-                    <div>🧾 {income.receiptNumber || '-'}</div>
+                    <div className="col-span-2">🧾 {income.receiptNumber || '-'}</div>
                   </div>
                   {canEditDelete && (
                     <div className="flex gap-2 mt-3">
