@@ -24,7 +24,7 @@ export default function IncomePage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [filteredIncomes, setFilteredIncomes] = useState([]);
   const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage] = useState(50);
+  const [itemsPerPage] = useState(25);
   const [showCompact, setShowCompact] = useState(false);
 
   useEffect(() => {
