@@ -21,7 +21,7 @@ export const withPermission = (WrappedComponent, module, action = 'view') => {
         <div className="p-8 text-center">
           <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
             <h3 className="font-bold">Access Denied</h3>
-            <p>You don't have permission to access this feature.</p>
+            <p>You don&apos;t have permission to access this feature.</p>
           </div>
         </div>
       );
