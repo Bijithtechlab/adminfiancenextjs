@@ -1,6 +1,8 @@
 'use client';
 import { useState, useEffect } from 'react';
 import PageGuard from '../../components/PageGuard';
+import { Permission } from '../../components/Permission';
+import { usePermissions } from '../../hooks/usePermissions';
 
 export default function InventoryPage() {
   const [inventory, setInventory] = useState([]);
@@ -8,7 +10,7 @@ export default function InventoryPage() {
   const [error, setError] = useState('');
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState(null);
-  const [userRole, setUserRole] = useState('');
+  const { userRole, checkPermission } = usePermissions();
   const [formData, setFormData] = useState({
     name: '',
     quantity: '1',
@@ -42,16 +44,6 @@ export default function InventoryPage() {
 
   useEffect(() => {
     fetchInventory();
-    // Get user role from token
-    const token = localStorage.getItem('token');
-    if (token) {
-      try {
-        const payload = JSON.parse(atob(token.split('.')[1]));
-        setUserRole(payload.role);
-      } catch (err) {
-        console.error('Error parsing token:', err);
-      }
-    }
   }, []);
 
   const fetchInventory = async () => {
@@ -153,7 +145,9 @@ export default function InventoryPage() {
     }
   };
 
-  const canEditDelete = userRole === 'Admin' || userRole === 'Manager' || userRole === 'admin' || userRole === 'manager';
+  const canEdit = checkPermission('inventory', 'edit');
+  const canDelete = checkPermission('inventory', 'delete');
+  const canCreate = checkPermission('inventory', 'create');
 
   if (loading) return <div className="p-4">Loading...</div>;
 
@@ -162,27 +156,29 @@ export default function InventoryPage() {
       <div className="p-4 pb-20 md:p-8 md:pb-8">
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl md:text-3xl font-bold">Inventory Management</h1>
-        <button
-          onClick={() => {
-            if (showForm) {
-              setShowForm(false);
-              setEditingId(null);
-              setFormData({
-                name: '',
-                quantity: '1',
-                unit: 'Pieces',
-                description: '',
-                purchaseDate: '',
-                purchasePrice: ''
-              });
-            } else {
-              setShowForm(true);
-            }
-          }}
-          className="bg-green-500 text-white px-6 py-3 text-base rounded-lg hover:bg-green-600 min-h-[44px] touch-manipulation"
-        >
-          {showForm ? 'Cancel' : (editingId ? 'Edit Item' : 'Add Item')}
-        </button>
+        <Permission module="inventory" action="create">
+          <button
+            onClick={() => {
+              if (showForm) {
+                setShowForm(false);
+                setEditingId(null);
+                setFormData({
+                  name: '',
+                  quantity: '1',
+                  unit: 'Pieces',
+                  description: '',
+                  purchaseDate: '',
+                  purchasePrice: ''
+                });
+              } else {
+                setShowForm(true);
+              }
+            }}
+            className="bg-green-500 text-white px-6 py-3 text-base rounded-lg hover:bg-green-600 min-h-[44px] touch-manipulation"
+          >
+            {showForm ? 'Cancel' : (editingId ? 'Edit Item' : 'Add Item')}
+          </button>
+        </Permission>
       </div>
 
       {error && (
@@ -310,7 +306,7 @@ export default function InventoryPage() {
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Description
               </th>
-              {canEditDelete && (
+              {(canEdit || canDelete) && (
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Actions
                 </th>
@@ -338,22 +334,26 @@ export default function InventoryPage() {
                 <td className="px-6 py-4 text-sm text-gray-900 max-w-xs truncate">
                   {item.description || '-'}
                 </td>
-                {canEditDelete && (
+                {(canEdit || canDelete) && (
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                    <button
-                      onClick={() => handleEdit(item)}
-                      className="hover:bg-gray-100 p-1 rounded mr-1 text-lg"
-                      title="Edit"
-                    >
-                      ✏️
-                    </button>
-                    <button
-                      onClick={() => handleDelete(item.id)}
-                      className="hover:bg-gray-100 p-1 rounded text-lg"
-                      title="Delete"
-                    >
-                      🗑️
-                    </button>
+                    <Permission module="inventory" action="edit">
+                      <button
+                        onClick={() => handleEdit(item)}
+                        className="hover:bg-gray-100 p-1 rounded mr-1 text-lg"
+                        title="Edit"
+                      >
+                        ✏️
+                      </button>
+                    </Permission>
+                    <Permission module="inventory" action="delete">
+                      <button
+                        onClick={() => handleDelete(item.id)}
+                        className="hover:bg-gray-100 p-1 rounded text-lg"
+                        title="Delete"
+                      >
+                        🗑️
+                      </button>
+                    </Permission>
                   </td>
                 )}
               </tr>

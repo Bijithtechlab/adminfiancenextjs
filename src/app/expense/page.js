@@ -1,6 +1,8 @@
 'use client';
 import { useState, useEffect } from 'react';
 import PageGuard from '../../components/PageGuard';
+import { Permission } from '../../components/Permission';
+import { usePermissions } from '../../hooks/usePermissions';
 
 export default function ExpensePage() {
   const [expenses, setExpenses] = useState([]);
@@ -8,7 +10,7 @@ export default function ExpensePage() {
   const [error, setError] = useState('');
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState(null);
-  const [userRole, setUserRole] = useState('');
+  const { userRole, checkPermission } = usePermissions();
   const [events, setEvents] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [filteredExpenses, setFilteredExpenses] = useState([]);
@@ -46,18 +48,6 @@ export default function ExpensePage() {
   useEffect(() => {
     fetchExpenses();
     fetchEvents();
-    // Get user role from token
-    const token = localStorage.getItem('token');
-    if (token) {
-      try {
-        const payload = JSON.parse(atob(token.split('.')[1]));
-        console.log('Token payload:', payload);
-        console.log('User role:', payload.role);
-        setUserRole(payload.role);
-      } catch (err) {
-        console.error('Error parsing token:', err);
-      }
-    }
   }, []);
 
   const fetchExpenses = async () => {
@@ -179,7 +169,9 @@ export default function ExpensePage() {
     }
   };
 
-  const canEditDelete = userRole === 'Admin' || userRole === 'Manager' || userRole === 'admin' || userRole === 'manager';
+  const canEdit = checkPermission('expense', 'edit');
+  const canDelete = checkPermission('expense', 'delete');
+  const canCreate = checkPermission('expense', 'create');
 
   // Filter expenses based on search term
   useEffect(() => {
@@ -211,7 +203,6 @@ export default function ExpensePage() {
       }
     }
   }, [expenses, searchTerm, events.length, currentPage, itemsPerPage]);
-  console.log('Current userRole:', userRole, 'canEditDelete:', canEditDelete);
 
   if (loading) return <div className="p-4">Loading...</div>;
 
@@ -230,28 +221,30 @@ export default function ExpensePage() {
               className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500 w-80"
             />
           )}
-        <button
-          onClick={() => {
-            if (showForm) {
-              setShowForm(false);
-              setEditingId(null);
-              setFormData({
-                category: 'Maintenance',
-                amount: '',
-                date: new Date().toISOString().split('T')[0],
-                paidTo: '',
-                paymentMethod: 'Cash',
-                remarks: '',
-                eventId: ''
-              });
-            } else {
-              setShowForm(true);
-            }
-          }}
-          className="bg-red-500 text-white px-6 py-3 text-base rounded-lg hover:bg-red-600 min-h-[44px] touch-manipulation"
-        >
-          {showForm ? 'Cancel' : (editingId ? 'Edit Expense' : 'Add Expense')}
-        </button>
+        <Permission module="expense" action="create">
+          <button
+            onClick={() => {
+              if (showForm) {
+                setShowForm(false);
+                setEditingId(null);
+                setFormData({
+                  category: 'Maintenance',
+                  amount: '',
+                  date: new Date().toISOString().split('T')[0],
+                  paidTo: '',
+                  paymentMethod: 'Cash',
+                  remarks: '',
+                  eventId: ''
+                });
+              } else {
+                setShowForm(true);
+              }
+            }}
+            className="bg-red-500 text-white px-6 py-3 text-base rounded-lg hover:bg-red-600 min-h-[44px] touch-manipulation"
+          >
+            {showForm ? 'Cancel' : (editingId ? 'Edit Expense' : 'Add Expense')}
+          </button>
+        </Permission>
         </div>
       </div>
 
@@ -409,14 +402,14 @@ export default function ExpensePage() {
                       {new Date(expense.date).toLocaleDateString()} • ₹{parseFloat(expense.amount).toLocaleString()}
                     </div>
                   </div>
-                  {canEditDelete && (
+                  <Permission module="expense" action="edit">
                     <button
                       onClick={() => handleEdit(expense)}
                       className="ml-2 text-blue-600 p-1"
                     >
                       ✏️
                     </button>
-                  )}
+                  </Permission>
                 </div>
               ) : (
                 // Detailed View
@@ -437,22 +430,24 @@ export default function ExpensePage() {
                     })() : '-'}</div>
                     <div className="col-span-2">📝 {expense.description || '-'}</div>
                   </div>
-                  {canEditDelete && (
-                    <div className="flex gap-2 mt-3">
+                  <div className="flex gap-2 mt-3">
+                    <Permission module="expense" action="edit">
                       <button
                         onClick={() => handleEdit(expense)}
                         className="flex-1 bg-blue-50 text-blue-600 py-2 px-3 rounded text-sm font-medium"
                       >
                         ✏️ Edit
                       </button>
+                    </Permission>
+                    <Permission module="expense" action="delete">
                       <button
                         onClick={() => handleDelete(expense.id)}
                         className="flex-1 bg-red-50 text-red-600 py-2 px-3 rounded text-sm font-medium"
                       >
                         🗑️ Delete
                       </button>
-                    </div>
-                  )}
+                    </Permission>
+                  </div>
                 </>
               )}
             </div>
@@ -502,7 +497,7 @@ export default function ExpensePage() {
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Remarks
               </th>
-              {canEditDelete && (
+              {(canEdit || canDelete) && (
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Actions
                 </th>
@@ -530,22 +525,26 @@ export default function ExpensePage() {
                 <td className="px-6 py-4 text-sm text-gray-900 max-w-xs truncate">
                   {expense.description || '-'}
                 </td>
-                {canEditDelete && (
+                {(canEdit || canDelete) && (
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                    <button
-                      onClick={() => handleEdit(expense)}
-                      className="hover:bg-gray-100 p-1 rounded mr-1 text-lg"
-                      title="Edit"
-                    >
-                      ✏️
-                    </button>
-                    <button
-                      onClick={() => handleDelete(expense.id)}
-                      className="hover:bg-gray-100 p-1 rounded text-lg"
-                      title="Delete"
-                    >
-                      🗑️
-                    </button>
+                    <Permission module="expense" action="edit">
+                      <button
+                        onClick={() => handleEdit(expense)}
+                        className="hover:bg-gray-100 p-1 rounded mr-1 text-lg"
+                        title="Edit"
+                      >
+                        ✏️
+                      </button>
+                    </Permission>
+                    <Permission module="expense" action="delete">
+                      <button
+                        onClick={() => handleDelete(expense.id)}
+                        className="hover:bg-gray-100 p-1 rounded text-lg"
+                        title="Delete"
+                      >
+                        🗑️
+                      </button>
+                    </Permission>
                   </td>
                 )}
               </tr>

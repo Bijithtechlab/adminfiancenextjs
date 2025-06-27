@@ -1,7 +1,7 @@
 'use client';
 import { useEffect, useState } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
-import { hasAccess } from '../utils/rolePermissions';
+import { hasAccess } from '../utils/permissions';
 
 export default function AuthGuard({ children }) {
   const [isAuthenticated, setIsAuthenticated] = useState(false);

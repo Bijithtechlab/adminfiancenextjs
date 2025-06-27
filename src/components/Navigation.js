@@ -1,7 +1,7 @@
 'use client';
 import { useRouter, usePathname } from 'next/navigation';
 import { useState, useEffect } from 'react';
-import { hasAccess } from '../utils/rolePermissions';
+import { hasAccess } from '../utils/permissions';
 
 export default function Navigation() {
   const router = useRouter();

@@ -1,7 +1,7 @@
 'use client';
 import { useRouter, usePathname } from 'next/navigation';
 import { useState, useEffect } from 'react';
-import { hasAccess } from '../utils/rolePermissions';
+import { hasAccess, hasPermission } from '../utils/permissions';
 
 export default function MobileNav() {
   const router = useRouter();
@@ -16,7 +16,8 @@ export default function MobileNav() {
     { path: '/events', label: 'Events', icon: '🎉', page: 'events' },
     { path: '/inventory', label: 'Inventory', icon: '📦', page: 'inventory' },
     { path: '/reports', label: 'Reports', icon: '📈', page: 'reports' },
-    { path: '/users', label: 'Users', icon: '👥', page: 'users' }
+    { path: '/users', label: 'Users', icon: '👥', page: 'users' },
+    { path: '/roles', label: 'Roles', icon: '🔐', page: 'users', action: 'manage_roles' }
   ];
 
   useEffect(() => {
@@ -35,7 +36,8 @@ export default function MobileNav() {
 
   const handleLogout = () => {
     localStorage.removeItem('token');
-    router.push('/login');
+    // Force page reload to ensure clean state
+    window.location.href = '/login';
   };
 
   if (pathname === '/login') {
@@ -46,6 +48,9 @@ export default function MobileNav() {
     <div className="mobile-nav md:hidden">
       {navItems
         .filter(item => {
+          if (item.action) {
+            return hasPermission(userRole, item.page, item.action);
+          }
           const access = hasAccess(userRole, item.page);
           console.log(`Mobile - Page: ${item.page}, Role: ${userRole}, Access: ${access}`);
           return access;

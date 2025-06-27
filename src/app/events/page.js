@@ -1,6 +1,8 @@
 'use client';
 import { useState, useEffect } from 'react';
 import PageGuard from '../../components/PageGuard';
+import { Permission } from '../../components/Permission';
+import { usePermissions } from '../../hooks/usePermissions';
 
 export default function EventsPage() {
   const [events, setEvents] = useState([]);
@@ -8,7 +10,7 @@ export default function EventsPage() {
   const [error, setError] = useState('');
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState(null);
-  const [userRole, setUserRole] = useState('');
+  const { userRole, checkPermission } = usePermissions();
   const [searchTerm, setSearchTerm] = useState('');
   const [filteredEvents, setFilteredEvents] = useState([]);
   const [showCompact, setShowCompact] = useState(true);
@@ -42,17 +44,6 @@ export default function EventsPage() {
 
   useEffect(() => {
     fetchEvents();
-    // Get user role from token
-    const token = localStorage.getItem('token');
-    if (token) {
-      try {
-        const payload = JSON.parse(atob(token.split('.')[1]));
-
-        setUserRole(payload.role);
-      } catch (err) {
-        console.error('Error parsing token:', err);
-      }
-    }
   }, []);
 
   const fetchEvents = async () => {
@@ -164,7 +155,9 @@ export default function EventsPage() {
     }
   };
 
-  const canEditDelete = userRole === 'Admin' || userRole === 'Manager' || userRole === 'admin' || userRole === 'manager';
+  const canEdit = checkPermission('events', 'edit');
+  const canDelete = checkPermission('events', 'delete');
+  const canCreate = checkPermission('events', 'create');
 
   // Filter events based on search term
   useEffect(() => {
@@ -226,28 +219,30 @@ export default function EventsPage() {
               className="w-full sm:w-80 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm"
             />
           )}
-        <button
-          onClick={() => {
-            if (showForm) {
-              setShowForm(false);
-              setEditingId(null);
-              setFormData({
-                name: '',
-                description: '',
-                startDate: new Date().toISOString().split('T')[0],
-                endDate: new Date(Date.now() + 24*60*60*1000).toISOString().split('T')[0],
-                budget: '',
-                type: 'general',
-                status: 'planned'
-              });
-            } else {
-              setShowForm(true);
-            }
-          }}
-          className="bg-purple-500 text-white px-6 py-3 text-base rounded-lg hover:bg-purple-600 min-h-[44px] touch-manipulation"
-        >
-          {showForm ? 'Cancel' : (editingId ? 'Edit Event' : 'Add Event')}
-        </button>
+        <Permission module="events" action="create">
+          <button
+            onClick={() => {
+              if (showForm) {
+                setShowForm(false);
+                setEditingId(null);
+                setFormData({
+                  name: '',
+                  description: '',
+                  startDate: new Date().toISOString().split('T')[0],
+                  endDate: new Date(Date.now() + 24*60*60*1000).toISOString().split('T')[0],
+                  budget: '',
+                  type: 'general',
+                  status: 'planned'
+                });
+              } else {
+                setShowForm(true);
+              }
+            }}
+            className="bg-purple-500 text-white px-6 py-3 text-base rounded-lg hover:bg-purple-600 min-h-[44px] touch-manipulation"
+          >
+            {showForm ? 'Cancel' : (editingId ? 'Edit Event' : 'Add Event')}
+          </button>
+        </Permission>
         </div>
       </div>
 
@@ -393,14 +388,14 @@ export default function EventsPage() {
                     }`}>
                       {event.status?.charAt(0).toUpperCase() + event.status?.slice(1)}
                     </span>
-                    {canEditDelete && (
+                    <Permission module="events" action="edit">
                       <button
                         onClick={() => handleEdit(event)}
                         className="text-blue-600 p-1"
                       >
                         ✏️
                       </button>
-                    )}
+                    </Permission>
                   </div>
                 </div>
               ) : (
@@ -428,22 +423,24 @@ export default function EventsPage() {
                       <span className={parseFloat(event.balance || 0) >= 0 ? 'text-green-600 font-medium' : 'text-red-600 font-medium'}>⚖️ ₹{parseFloat(event.balance || 0).toLocaleString()}</span>
                     </div>
                   </div>
-                  {canEditDelete && (
-                    <div className="flex gap-2 mt-3">
+                  <div className="flex gap-2 mt-3">
+                    <Permission module="events" action="edit">
                       <button
                         onClick={() => handleEdit(event)}
                         className="flex-1 bg-blue-50 text-blue-600 py-2 px-3 rounded text-sm font-medium"
                       >
                         ✏️ Edit
                       </button>
+                    </Permission>
+                    <Permission module="events" action="delete">
                       <button
                         onClick={() => handleDelete(event.id)}
                         className="flex-1 bg-red-50 text-red-600 py-2 px-3 rounded text-sm font-medium"
                       >
                         🗑️ Delete
                       </button>
-                    </div>
-                  )}
+                    </Permission>
+                  </div>
                 </>
               )}
             </div>
@@ -502,7 +499,7 @@ export default function EventsPage() {
               <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Balance
               </th>
-              {canEditDelete && (
+              {(canEdit || canDelete) && (
                 <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Actions
                 </th>
@@ -547,22 +544,26 @@ export default function EventsPage() {
                 }`}>
                   ₹{parseFloat(event.balance || 0).toLocaleString()}
                 </td>
-                {canEditDelete && (
+                {(canEdit || canDelete) && (
                   <td className="px-4 py-4 whitespace-nowrap text-sm font-medium">
-                    <button
-                      onClick={() => handleEdit(event)}
-                      className="hover:bg-gray-100 p-1 rounded mr-1 text-lg"
-                      title="Edit"
-                    >
-                      ✏️
-                    </button>
-                    <button
-                      onClick={() => handleDelete(event.id)}
-                      className="hover:bg-gray-100 p-1 rounded text-lg"
-                      title="Delete"
-                    >
-                      🗑️
-                    </button>
+                    <Permission module="events" action="edit">
+                      <button
+                        onClick={() => handleEdit(event)}
+                        className="hover:bg-gray-100 p-1 rounded mr-1 text-lg"
+                        title="Edit"
+                      >
+                        ✏️
+                      </button>
+                    </Permission>
+                    <Permission module="events" action="delete">
+                      <button
+                        onClick={() => handleDelete(event.id)}
+                        className="hover:bg-gray-100 p-1 rounded text-lg"
+                        title="Delete"
+                      >
+                        🗑️
+                      </button>
+                    </Permission>
                   </td>
                 )}
               </tr>

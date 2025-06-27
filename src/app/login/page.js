@@ -29,7 +29,8 @@ export default function LoginPage() {
 
       if (response.ok) {
         localStorage.setItem('token', data.token);
-        router.push('/dashboard');
+        // Force page reload to ensure all components refresh with new permissions
+        window.location.href = '/dashboard';
       } else {
         setError(data.message || 'Login failed');
       }

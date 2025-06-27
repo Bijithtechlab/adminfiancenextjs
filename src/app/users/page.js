@@ -1,6 +1,8 @@
 'use client';
 import { useState, useEffect } from 'react';
 import PageGuard from '../../components/PageGuard';
+import { Permission } from '../../components/Permission';
+import { usePermissions } from '../../hooks/usePermissions';
 
 export default function UsersPage() {
   const [users, setUsers] = useState([]);
@@ -11,14 +13,17 @@ export default function UsersPage() {
   const [selectedUser, setSelectedUser] = useState(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [userToDelete, setUserToDelete] = useState(null);
+  const { checkPermission } = usePermissions();
   const [formData, setFormData] = useState({
     name: '',
     email: '',
     password: '',
     role: 'data-entry'
   });
+  const [formKey, setFormKey] = useState(0);
 
   const roles = [
+    { value: 'Super Admin', label: 'Super Admin' },
     { value: 'admin', label: 'Administrator' },
     { value: 'manager', label: 'Manager' },
     { value: 'accountant', label: 'Accountant' },
@@ -61,13 +66,18 @@ export default function UsersPage() {
   const handleOpenCreateDialog = () => {
     setDialogMode('create');
     setSelectedUser(null);
-    setFormData({
-      name: '',
-      email: '',
-      password: '',
-      role: 'data-entry'
-    });
-    setShowForm(true);
+    setShowForm(false); // Close first
+    setTimeout(() => {
+      setFormData({
+        name: '',
+        email: '',
+        password: '',
+        role: 'data-entry'
+      });
+      setFormKey(prev => prev + 1);
+      setShowForm(true);
+      setError('');
+    }, 50);
   };
 
   const handleSubmit = async (e) => {
@@ -75,8 +85,11 @@ export default function UsersPage() {
     
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch('/api/users', {
-        method: 'POST',
+      const url = dialogMode === 'edit' ? `/api/users/${selectedUser.id}` : '/api/users';
+      const method = dialogMode === 'edit' ? 'PUT' : 'POST';
+      
+      const response = await fetch(url, {
+        method,
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`
@@ -85,18 +98,60 @@ export default function UsersPage() {
       });
 
       if (response.ok) {
-        setShowForm(false);
+        // Reset everything first
         setFormData({
           name: '',
           email: '',
           password: '',
           role: 'data-entry'
         });
+        setSelectedUser(null);
+        setDialogMode('create');
+        setFormKey(prev => prev + 1);
+        setShowForm(false);
+        setError('');
+        fetchUsers();
+      } else {
+        const data = await response.json();
+        setError(data.message || `Failed to ${dialogMode} user`);
+      }
+    } catch (err) {
+      setError('Network error');
+    }
+  };
+
+  const handleEdit = (user) => {
+    setDialogMode('edit');
+    setSelectedUser(user);
+    setFormData({
+      name: user.name,
+      email: user.email,
+      password: '', // Don't populate password for security
+      role: user.role
+    });
+    setShowForm(true);
+  };
+
+  const handleDelete = async (user) => {
+    if (!confirm(`Are you sure you want to delete user "${user.name}"?`)) {
+      return;
+    }
+
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch(`/api/users/${user.id}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      if (response.ok) {
         fetchUsers();
         setError('');
       } else {
         const data = await response.json();
-        setError(data.message || 'Failed to create user');
+        setError(data.message || 'Failed to delete user');
       }
     } catch (err) {
       setError('Network error');
@@ -115,12 +170,14 @@ export default function UsersPage() {
       <div className="p-4 pb-20 md:p-8 md:pb-8">
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl md:text-3xl font-bold">User Management</h1>
-        <button
-          onClick={handleOpenCreateDialog}
-          className="bg-blue-500 text-white px-6 py-3 text-base rounded-lg hover:bg-blue-600 min-h-[44px] touch-manipulation"
-        >
-          Add New User
-        </button>
+        <Permission module="users" action="create">
+          <button
+            onClick={handleOpenCreateDialog}
+            className="bg-blue-500 text-white px-6 py-3 text-base rounded-lg hover:bg-blue-600 min-h-[44px] touch-manipulation"
+          >
+            Add New User
+          </button>
+        </Permission>
       </div>
 
       {error && (
@@ -131,8 +188,8 @@ export default function UsersPage() {
 
       {showForm && (
         <div className="bg-white p-6 rounded-lg shadow-md mb-6">
-          <h2 className="text-xl font-semibold mb-4">Add New User</h2>
-          <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <h2 className="text-xl font-semibold mb-4">{dialogMode === 'edit' ? 'Edit User' : 'Add New User'}</h2>
+          <form key={formKey} onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Name *
@@ -159,15 +216,16 @@ export default function UsersPage() {
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Password *
+                Password {dialogMode === 'edit' ? '(leave blank to keep current)' : '*'}
               </label>
               <input
                 type="password"
-                required
+                required={dialogMode === 'create'}
                 value={formData.password}
                 onChange={(e) => setFormData({...formData, password: e.target.value})}
                 className="w-full px-4 py-3 text-base text-gray-900 bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                 minLength="6"
+                placeholder={dialogMode === 'edit' ? 'Leave blank to keep current password' : ''}
               />
             </div>
             <div>
@@ -204,7 +262,7 @@ export default function UsersPage() {
                 type="submit"
                 className="bg-green-500 text-white px-6 py-3 rounded-lg hover:bg-green-600 min-h-[44px]"
               >
-                Create User
+                {dialogMode === 'edit' ? 'Update User' : 'Create User'}
               </button>
             </div>
           </form>
@@ -227,6 +285,11 @@ export default function UsersPage() {
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Created At
               </th>
+              {checkPermission('users', 'delete') && (
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Actions
+                </th>
+              )}
             </tr>
           </thead>
           <tbody className="bg-white divide-y divide-gray-200">
@@ -251,6 +314,42 @@ export default function UsersPage() {
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                   {new Date(user.created_at).toLocaleDateString()}
                 </td>
+                {checkPermission('users', 'delete') && (
+                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                    {/* Get current user ID from token */}
+                    {(() => {
+                      const token = localStorage.getItem('token');
+                      const currentUserId = token ? JSON.parse(atob(token.split('.')[1])).id : null;
+                      const isOwnAccount = currentUserId === user.id;
+                      
+                      return (
+                        <>
+                          {!isOwnAccount && (
+                            <button
+                              onClick={() => handleEdit(user)}
+                              className="hover:bg-gray-100 p-1 rounded mr-1 text-lg"
+                              title="Edit User"
+                            >
+                              ✏️
+                            </button>
+                          )}
+                          {!isOwnAccount && (
+                            <button
+                              onClick={() => handleDelete(user)}
+                              className="hover:bg-gray-100 p-1 rounded text-lg"
+                              title="Delete User"
+                            >
+                              🗑️
+                            </button>
+                          )}
+                          {isOwnAccount && (
+                            <span className="text-gray-400 text-sm">Own Account</span>
+                          )}
+                        </>
+                      );
+                    })()}
+                  </td>
+                )}
               </tr>
             ))}
           </tbody>

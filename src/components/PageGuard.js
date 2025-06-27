@@ -1,7 +1,7 @@
 'use client';
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { hasAccess } from '../utils/rolePermissions';
+import { hasAccess } from '../utils/permissions';
 
 export default function PageGuard({ children, requiredPage }) {
   const [hasPageAccess, setHasPageAccess] = useState(false);

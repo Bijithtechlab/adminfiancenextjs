@@ -1,5 +1,7 @@
 'use client';
 import { useState, useEffect } from 'react';
+import { Permission, PermissionButton } from '../../components/Permission';
+import { usePermissions } from '../../hooks/usePermissions';
 
 export default function IncomePage() {
   const [incomes, setIncomes] = useState([]);
@@ -7,7 +9,7 @@ export default function IncomePage() {
   const [error, setError] = useState('');
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState(null);
-  const [userRole, setUserRole] = useState('');
+  const { userRole, checkPermission } = usePermissions();
   const [formData, setFormData] = useState({
     donorName: '',
     houseName: '',
@@ -30,17 +32,6 @@ export default function IncomePage() {
   useEffect(() => {
     fetchIncomes();
     fetchEvents();
-    // Get user role from token
-    const token = localStorage.getItem('token');
-    if (token) {
-      try {
-        const payload = JSON.parse(atob(token.split('.')[1]));
-
-        setUserRole(payload.role);
-      } catch (err) {
-        console.error('Error parsing token:', err);
-      }
-    }
   }, []);
 
   const fetchEvents = async () => {
@@ -168,7 +159,9 @@ export default function IncomePage() {
     }
   };
 
-  const canEditDelete = userRole === 'Admin' || userRole === 'Manager' || userRole === 'admin' || userRole === 'manager';
+  const canEdit = checkPermission('income', 'edit');
+  const canDelete = checkPermission('income', 'delete');
+  const canCreate = checkPermission('income', 'create');
 
   // Filter incomes based on search term
   useEffect(() => {
@@ -220,31 +213,33 @@ export default function IncomePage() {
               className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 w-80"
             />
           )}
-        <button
-          onClick={() => {
-            if (showForm) {
-              setShowForm(false);
-              setEditingId(null);
-              setFormData({
-                donorName: '',
-                houseName: '',
-                address: '',
-                phoneNumber: '',
-                amount: '',
-                date: new Date().toISOString().split('T')[0],
-                description: '',
-                donationType: 'general',
-                eventId: '',
-                receiptNumber: ''
-              });
-            } else {
-              setShowForm(true);
-            }
-          }}
-          className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
-        >
-          {showForm ? 'Cancel' : (editingId ? 'Edit Income' : 'Add Income')}
-        </button>
+        <Permission module="income" action="create">
+          <button
+            onClick={() => {
+              if (showForm) {
+                setShowForm(false);
+                setEditingId(null);
+                setFormData({
+                  donorName: '',
+                  houseName: '',
+                  address: '',
+                  phoneNumber: '',
+                  amount: '',
+                  date: new Date().toISOString().split('T')[0],
+                  description: '',
+                  donationType: 'general',
+                  eventId: '',
+                  receiptNumber: ''
+                });
+              } else {
+                setShowForm(true);
+              }
+            }}
+            className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
+          >
+            {showForm ? 'Cancel' : (editingId ? 'Edit Income' : 'Add Income')}
+          </button>
+        </Permission>
         </div>
       </div>
 
@@ -434,14 +429,14 @@ export default function IncomePage() {
                       {income.description && <div className="text-xs text-gray-400 mt-1">{income.description.substring(0, 50)}{income.description.length > 50 ? '...' : ''}</div>}
                     </div>
                   </div>
-                  {canEditDelete && (
+                  <Permission module="income" action="edit">
                     <button
                       onClick={() => handleEdit(income)}
                       className="ml-2 text-blue-600 p-1"
                     >
                       ✏️
                     </button>
-                  )}
+                  </Permission>
                 </div>
               ) : (
                 // Detailed View
@@ -469,22 +464,24 @@ export default function IncomePage() {
                       <div className="col-span-2 text-xs text-gray-500">📝 {income.description}</div>
                     )}
                   </div>
-                  {canEditDelete && (
-                    <div className="flex gap-2 mt-3">
+                  <div className="flex gap-2 mt-3">
+                    <Permission module="income" action="edit">
                       <button
                         onClick={() => handleEdit(income)}
                         className="flex-1 bg-blue-50 text-blue-600 py-2 px-3 rounded text-sm font-medium"
                       >
                         ✏️ Edit
                       </button>
+                    </Permission>
+                    <Permission module="income" action="delete">
                       <button
                         onClick={() => handleDelete(income.id)}
                         className="flex-1 bg-red-50 text-red-600 py-2 px-3 rounded text-sm font-medium"
                       >
                         🗑️ Delete
                       </button>
-                    </div>
-                  )}
+                    </Permission>
+                  </div>
                 </>
               )}
             </div>
@@ -540,7 +537,7 @@ export default function IncomePage() {
               <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Receipt #
               </th>
-              {canEditDelete && (
+              {(canEdit || canDelete) && (
                 <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Actions
                 </th>
@@ -584,22 +581,26 @@ export default function IncomePage() {
                 <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900">
                   {income.receiptNumber || '-'}
                 </td>
-                {canEditDelete && (
+                {(canEdit || canDelete) && (
                   <td className="px-4 py-4 whitespace-nowrap text-sm font-medium">
-                    <button
-                      onClick={() => handleEdit(income)}
-                      className="hover:bg-gray-100 p-1 rounded mr-1 text-lg"
-                      title="Edit"
-                    >
-                      ✏️
-                    </button>
-                    <button
-                      onClick={() => handleDelete(income.id)}
-                      className="hover:bg-gray-100 p-1 rounded text-lg"
-                      title="Delete"
-                    >
-                      🗑️
-                    </button>
+                    <Permission module="income" action="edit">
+                      <button
+                        onClick={() => handleEdit(income)}
+                        className="hover:bg-gray-100 p-1 rounded mr-1 text-lg"
+                        title="Edit"
+                      >
+                        ✏️
+                      </button>
+                    </Permission>
+                    <Permission module="income" action="delete">
+                      <button
+                        onClick={() => handleDelete(income.id)}
+                        className="hover:bg-gray-100 p-1 rounded text-lg"
+                        title="Delete"
+                      >
+                        🗑️
+                      </button>
+                    </Permission>
                   </td>
                 )}
               </tr>
