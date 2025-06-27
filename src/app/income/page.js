@@ -175,15 +175,34 @@ export default function IncomePage() {
     if (!searchTerm) {
       setFilteredIncomes(incomes);
     } else {
-      const filtered = incomes.filter(income => 
-        income.donorName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (income.houseName && income.houseName.toLowerCase().includes(searchTerm.toLowerCase())) ||
-        income.donationType.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (income.receiptNumber && income.receiptNumber.toLowerCase().includes(searchTerm.toLowerCase()))
-      );
+      const filtered = incomes.filter(income => {
+        const eventName = income.eventId ? events.find(event => event.id === income.eventId)?.name || '' : '';
+        const incomeDate = new Date(income.date);
+        const dateStr = incomeDate.toLocaleDateString();
+        const dateStrUS = incomeDate.toLocaleDateString('en-US');
+        const dateStrUK = incomeDate.toLocaleDateString('en-GB');
+        const isoDate = income.date.split('T')[0];
+        
+        return income.donorName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+               (income.houseName && income.houseName.toLowerCase().includes(searchTerm.toLowerCase())) ||
+               (income.description && income.description.toLowerCase().includes(searchTerm.toLowerCase())) ||
+               eventName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+               dateStr.includes(searchTerm) ||
+               dateStrUS.includes(searchTerm) ||
+               dateStrUK.includes(searchTerm) ||
+               isoDate.includes(searchTerm) ||
+               income.donationType.toLowerCase().includes(searchTerm.toLowerCase()) ||
+               (income.receiptNumber && income.receiptNumber.toLowerCase().includes(searchTerm.toLowerCase()));
+      });
       setFilteredIncomes(filtered);
+      
+      // Adjust current page if it exceeds filtered results
+      const maxPage = Math.ceil(filtered.length / itemsPerPage);
+      if (currentPage > maxPage && maxPage > 0) {
+        setCurrentPage(maxPage);
+      }
     }
-  }, [incomes, searchTerm]);
+  }, [incomes, searchTerm, events.length, currentPage, itemsPerPage]);
 
   if (loading) return <div className="p-8">Loading...</div>;
 
@@ -195,10 +214,10 @@ export default function IncomePage() {
           {!showForm && (
             <input
               type="text"
-              placeholder="Search by donor, house, type, or receipt..."
+              placeholder="Search by donor, house, date, event, description..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 w-64"
+              className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 w-80"
             />
           )}
         <button
@@ -406,9 +425,13 @@ export default function IncomePage() {
                 // Compact View
                 <div className="flex justify-between items-center">
                   <div className="flex-1">
-                    <div className="font-medium text-sm text-gray-900">{income.donorName}</div>
+                    <div className="font-medium text-sm text-gray-900">
+                      {income.donorName}
+                      {income.receiptNumber && <span className="text-xs text-blue-600 ml-2">🧾{income.receiptNumber}</span>}
+                    </div>
                     <div className="text-xs text-gray-500">
                       {new Date(income.date).toLocaleDateString()} • ₹{parseFloat(income.amount).toLocaleString()}
+                      {income.description && <div className="text-xs text-gray-400 mt-1">{income.description.substring(0, 50)}{income.description.length > 50 ? '...' : ''}</div>}
                     </div>
                   </div>
                   {canEditDelete && (
@@ -425,7 +448,10 @@ export default function IncomePage() {
                 <>
                   <div className="flex justify-between items-start mb-2">
                     <div>
-                      <h3 className="font-medium text-gray-900">{income.donorName}</h3>
+                      <h3 className="font-medium text-gray-900">
+                        {income.donorName}
+                        {income.receiptNumber && <span className="text-xs text-blue-600 ml-2">🧾{income.receiptNumber}</span>}
+                      </h3>
                     </div>
                     <span className="text-lg font-semibold text-green-600">
                       ₹{parseFloat(income.amount).toLocaleString()}
@@ -435,8 +461,13 @@ export default function IncomePage() {
                     <div>🏠 {income.houseName || '-'}</div>
                     <div>📞 {income.phoneNumber || '-'}</div>
                     <div>📅 {new Date(income.date).toLocaleDateString()}</div>
-                    <div>🎪 {income.eventId ? events.find(event => event.id === income.eventId)?.name || '-' : '-'}</div>
-                    <div className="col-span-2">🧾 {income.receiptNumber || '-'}</div>
+                    <div>🎪 {income.eventId ? (() => {
+                      const eventName = events.find(event => event.id === income.eventId)?.name || '-';
+                      return eventName.length > 15 ? eventName.substring(0, 15) + '...' : eventName;
+                    })() : '-'}</div>
+                    {income.description && (
+                      <div className="col-span-2 text-xs text-gray-500">📝 {income.description}</div>
+                    )}
                   </div>
                   {canEditDelete && (
                     <div className="flex gap-2 mt-3">
@@ -504,6 +535,9 @@ export default function IncomePage() {
                 Event
               </th>
               <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Description
+              </th>
+              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Receipt #
               </th>
               {canEditDelete && (
@@ -529,11 +563,23 @@ export default function IncomePage() {
                 <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900">
                   {new Date(income.date).toLocaleDateString()}
                 </td>
-                <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900">
-                  {income.eventId ? 
-                    events.find(event => event.id === income.eventId)?.name || '-' 
-                    : '-'
-                  }
+                <td className="px-4 py-4 text-sm text-gray-900 max-w-xs">
+                  {income.eventId ? (
+                    <div className="truncate" title={events.find(event => event.id === income.eventId)?.name || '-'}>
+                      {(() => {
+                        const eventName = events.find(event => event.id === income.eventId)?.name || '-';
+                        return eventName.length > 20 ? eventName.substring(0, 20) + '...' : eventName;
+                      })()} 
+                    </div>
+                  ) : '-'}
+                </td>
+                <td className="px-4 py-4 text-sm text-gray-900 max-w-xs">
+                  <div className="truncate" title={income.description || '-'}>
+                    {income.description ? 
+                      (income.description.length > 30 ? income.description.substring(0, 30) + '...' : income.description)
+                      : '-'
+                    }
+                  </div>
                 </td>
                 <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900">
                   {income.receiptNumber || '-'}

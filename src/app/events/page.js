@@ -12,6 +12,8 @@ export default function EventsPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [filteredEvents, setFilteredEvents] = useState([]);
   const [showCompact, setShowCompact] = useState(true);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage] = useState(10);
   const [formData, setFormData] = useState({
     name: '',
     description: '',
@@ -127,8 +129,8 @@ export default function EventsPage() {
     setFormData({
       name: event.name,
       description: event.description || '',
-      startDate: event.date.split('T')[0],
-      endDate: event.date.split('T')[0],
+      startDate: event.startDate ? event.startDate.split('T')[0] : event.date.split('T')[0],
+      endDate: event.endDate ? event.endDate.split('T')[0] : event.date.split('T')[0],
       budget: event.budget || '',
       type: event.type || 'general',
       status: event.status || 'planned'
@@ -169,14 +171,43 @@ export default function EventsPage() {
     if (!searchTerm) {
       setFilteredEvents(events);
     } else {
-      const filtered = events.filter(event => 
-        event.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (event.status && event.status.toLowerCase().includes(searchTerm.toLowerCase())) ||
-        (event.description && event.description.toLowerCase().includes(searchTerm.toLowerCase()))
-      );
+      const filtered = events.filter(event => {
+        const startDate = new Date(event.startDate || event.date);
+        const endDate = event.endDate ? new Date(event.endDate) : null;
+        const startDateStr = startDate.toLocaleDateString();
+        const startDateStrUS = startDate.toLocaleDateString('en-US');
+        const startDateStrUK = startDate.toLocaleDateString('en-GB');
+        const startIsoDate = (event.startDate || event.date).split('T')[0];
+        
+        let endDateMatches = false;
+        if (endDate) {
+          const endDateStr = endDate.toLocaleDateString();
+          const endDateStrUS = endDate.toLocaleDateString('en-US');
+          const endDateStrUK = endDate.toLocaleDateString('en-GB');
+          const endIsoDate = event.endDate.split('T')[0];
+          endDateMatches = endDateStr.includes(searchTerm) ||
+                          endDateStrUS.includes(searchTerm) ||
+                          endDateStrUK.includes(searchTerm) ||
+                          endIsoDate.includes(searchTerm);
+        }
+        
+        return event.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+               (event.status && event.status.toLowerCase().includes(searchTerm.toLowerCase())) ||
+               startDateStr.includes(searchTerm) ||
+               startDateStrUS.includes(searchTerm) ||
+               startDateStrUK.includes(searchTerm) ||
+               startIsoDate.includes(searchTerm) ||
+               endDateMatches;
+      });
       setFilteredEvents(filtered);
+      
+      // Adjust current page if it exceeds filtered results
+      const maxPage = Math.ceil(filtered.length / itemsPerPage);
+      if (currentPage > maxPage && maxPage > 0) {
+        setCurrentPage(maxPage);
+      }
     }
-  }, [events, searchTerm]);
+  }, [events, searchTerm, currentPage, itemsPerPage]);
 
   if (loading) return <div className="p-4">Loading...</div>;
 
@@ -189,10 +220,10 @@ export default function EventsPage() {
           {!showForm && (
             <input
               type="text"
-              placeholder="Search by name, status, or description..."
+              placeholder="Search by name, date, status..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full sm:w-64 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm"
+              className="w-full sm:w-80 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm"
             />
           )}
         <button
@@ -242,30 +273,32 @@ export default function EventsPage() {
                 className="w-full px-4 py-3 text-base text-gray-900 bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
               />
             </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Start Date *
-              </label>
-              <input
-                type="date"
-                required
-                value={formData.startDate}
-                onChange={(e) => setFormData({...formData, startDate: e.target.value})}
-                className="w-full px-4 py-3 text-base text-gray-900 bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                End Date *
-              </label>
-              <input
-                type="date"
-                required
-                value={formData.endDate}
-                onChange={(e) => setFormData({...formData, endDate: e.target.value})}
-                min={formData.startDate}
-                className="w-full px-4 py-3 text-base text-gray-900 bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
-              />
+            <div className="md:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Start Date *
+                </label>
+                <input
+                  type="date"
+                  required
+                  value={formData.startDate}
+                  onChange={(e) => setFormData({...formData, startDate: e.target.value})}
+                  className="w-full px-4 py-3 text-base text-gray-900 bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  End Date *
+                </label>
+                <input
+                  type="date"
+                  required
+                  value={formData.endDate}
+                  onChange={(e) => setFormData({...formData, endDate: e.target.value})}
+                  min={formData.startDate}
+                  className="w-full px-4 py-3 text-base text-gray-900 bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                />
+              </div>
             </div>
 
             <div>
@@ -325,7 +358,7 @@ export default function EventsPage() {
         <div className="block sm:hidden p-4 bg-gray-50 border-b">
           <div className="flex justify-between items-center mb-2">
             <span className="text-sm text-gray-600">
-              {filteredEvents.length} events
+              {filteredEvents.length} events • Page {currentPage}
             </span>
             <button
               onClick={() => setShowCompact(!showCompact)}
@@ -338,7 +371,9 @@ export default function EventsPage() {
         
         {/* Mobile Card View */}
         <div className="block sm:hidden">
-          {filteredEvents.map((event) => (
+          {filteredEvents
+            .slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage)
+            .map((event) => (
             <div key={event.id} className={`border-b border-gray-200 ${showCompact ? 'p-2' : 'p-4'}`}>
               {showCompact ? (
                 // Compact View
@@ -346,7 +381,7 @@ export default function EventsPage() {
                   <div className="flex-1">
                     <div className="font-medium text-sm text-gray-900">{event.name}</div>
                     <div className="text-xs text-gray-500">
-                      {new Date(event.date).toLocaleDateString()} • ₹{parseFloat(event.balance || 0).toLocaleString()}
+                      {new Date(event.startDate || event.date).toLocaleDateString()}{event.endDate && event.endDate !== (event.startDate || event.date) ? ` - ${new Date(event.endDate).toLocaleDateString()}` : ''} • ₹{parseFloat(event.balance || 0).toLocaleString()}
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
@@ -374,7 +409,6 @@ export default function EventsPage() {
                   <div className="flex justify-between items-start mb-2">
                     <div>
                       <h3 className="font-medium text-gray-900">{event.name}</h3>
-                      <p className="text-sm text-gray-500">{event.type || 'General'}</p>
                     </div>
                     <span className={`px-2 py-1 text-xs rounded-full ${
                       event.status === 'completed' ? 'bg-green-100 text-green-800' :
@@ -385,16 +419,14 @@ export default function EventsPage() {
                       {event.status?.charAt(0).toUpperCase() + event.status?.slice(1)}
                     </span>
                   </div>
-                  <div className="grid grid-cols-2 gap-2 text-sm text-gray-600 mb-2">
-                    <div>📅 {new Date(event.date).toLocaleDateString()}</div>
-                    <div>💰 {event.budget ? `₹${parseFloat(event.budget).toLocaleString()}` : '-'}</div>
-                    <div className="text-green-600">💵 ₹{parseFloat(event.total_income || 0).toLocaleString()}</div>
-                    <div className="text-red-600">💸 ₹{parseFloat(event.total_expense || 0).toLocaleString()}</div>
-                  </div>
-                  <div className={`text-sm font-medium mb-2 ${
-                    parseFloat(event.balance || 0) >= 0 ? 'text-green-600' : 'text-red-600'
-                  }`}>
-                    Balance: ₹{parseFloat(event.balance || 0).toLocaleString()}
+                  <div className="text-sm text-gray-600 mb-2">
+                    <div className="mb-1">📅 {new Date(event.startDate || event.date).toLocaleDateString()}{event.endDate && event.endDate !== (event.startDate || event.date) ? ` - ${new Date(event.endDate).toLocaleDateString()}` : ''}</div>
+                    <div className="flex flex-wrap gap-3 text-xs">
+                      <span>💰 ₹{event.budget ? parseFloat(event.budget).toLocaleString() : '0'}</span>
+                      <span className="text-green-600">💵 ₹{parseFloat(event.total_income || 0).toLocaleString()}</span>
+                      <span className="text-red-600">💸 ₹{parseFloat(event.total_expense || 0).toLocaleString()}</span>
+                      <span className={parseFloat(event.balance || 0) >= 0 ? 'text-green-600 font-medium' : 'text-red-600 font-medium'}>⚖️ ₹{parseFloat(event.balance || 0).toLocaleString()}</span>
+                    </div>
                   </div>
                   {canEditDelete && (
                     <div className="flex gap-2 mt-3">
@@ -416,6 +448,29 @@ export default function EventsPage() {
               )}
             </div>
           ))}
+          
+          {/* Mobile Pagination */}
+          {filteredEvents.length > itemsPerPage && (
+            <div className="p-4 bg-gray-50 flex justify-between items-center">
+              <button
+                onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                disabled={currentPage === 1}
+                className="px-3 py-1 bg-purple-500 text-white rounded disabled:bg-gray-300 text-sm"
+              >
+                ← Prev
+              </button>
+              <span className="text-sm text-gray-600">
+                Page {currentPage} of {Math.ceil(filteredEvents.length / itemsPerPage)}
+              </span>
+              <button
+                onClick={() => setCurrentPage(prev => Math.min(prev + 1, Math.ceil(filteredEvents.length / itemsPerPage)))}
+                disabled={currentPage === Math.ceil(filteredEvents.length / itemsPerPage)}
+                className="px-3 py-1 bg-purple-500 text-white rounded disabled:bg-gray-300 text-sm"
+              >
+                Next →
+              </button>
+            </div>
+          )}
         </div>
         
         {/* Desktop Table View */}
@@ -427,7 +482,10 @@ export default function EventsPage() {
                 Event
               </th>
               <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Date
+                Start Date
+              </th>
+              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                End Date
               </th>
               <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Status
@@ -452,14 +510,18 @@ export default function EventsPage() {
             </tr>
           </thead>
           <tbody className="bg-white divide-y divide-gray-200">
-            {filteredEvents.map((event) => (
+            {filteredEvents
+              .slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage)
+              .map((event) => (
               <tr key={event.id}>
                 <td className="px-4 py-4 text-sm font-medium text-gray-900">
                   <div className="font-medium">{event.name}</div>
-                  <div className="text-xs text-gray-500">{event.type || 'General'}</div>
                 </td>
                 <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900">
-                  {new Date(event.date).toLocaleDateString()}
+                  {new Date(event.startDate || event.date).toLocaleDateString()}
+                </td>
+                <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900">
+                  {event.endDate ? new Date(event.endDate).toLocaleDateString() : new Date(event.startDate || event.date).toLocaleDateString()}
                 </td>
                 <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900">
                   <span className={`px-2 py-1 text-xs rounded-full ${
@@ -508,6 +570,29 @@ export default function EventsPage() {
           </tbody>
         </table>
         </div>
+        
+        {/* Desktop Pagination */}
+        {filteredEvents.length > itemsPerPage && (
+          <div className="hidden sm:flex justify-between items-center p-4 bg-gray-50">
+            <button
+              onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+              disabled={currentPage === 1}
+              className="px-4 py-2 bg-purple-500 text-white rounded disabled:bg-gray-300"
+            >
+              ← Previous
+            </button>
+            <span className="text-gray-600">
+              Page {currentPage} of {Math.ceil(filteredEvents.length / itemsPerPage)} ({filteredEvents.length} events)
+            </span>
+            <button
+              onClick={() => setCurrentPage(prev => Math.min(prev + 1, Math.ceil(filteredEvents.length / itemsPerPage)))}
+              disabled={currentPage === Math.ceil(filteredEvents.length / itemsPerPage)}
+              className="px-4 py-2 bg-purple-500 text-white rounded disabled:bg-gray-300"
+            >
+              Next →
+            </button>
+          </div>
+        )}
         </div>
       </div>
     </PageGuard>

@@ -24,9 +24,9 @@ export async function PUT(request, { params }) {
 
     const query = `
       UPDATE events 
-      SET name = $1, description = $2, date = $3, budget = $4, 
-          status = $5, updated_at = $6
-      WHERE id = $7
+      SET name = $1, description = $2, date = $3, end_date = $4, budget = $5, 
+          status = $6, updated_at = $7
+      WHERE id = $8
       RETURNING *
     `;
     
@@ -34,6 +34,7 @@ export async function PUT(request, { params }) {
       name,
       description || '',
       startDate,
+      endDate || startDate,
       budget ? parseFloat(budget) : null,
       status || 'planned',
       timestamp,

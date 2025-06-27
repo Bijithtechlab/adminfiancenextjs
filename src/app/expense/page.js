@@ -186,14 +186,31 @@ export default function ExpensePage() {
     if (!searchTerm) {
       setFilteredExpenses(expenses);
     } else {
-      const filtered = expenses.filter(expense => 
-        expense.category.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (expense.vendorName && expense.vendorName.toLowerCase().includes(searchTerm.toLowerCase())) ||
-        (expense.description && expense.description.toLowerCase().includes(searchTerm.toLowerCase()))
-      );
+      const filtered = expenses.filter(expense => {
+        const eventName = expense.eventId ? events.find(event => event.id === expense.eventId)?.name || '' : '';
+        const expenseDate = new Date(expense.date);
+        const dateStr = expenseDate.toLocaleDateString();
+        const dateStrUS = expenseDate.toLocaleDateString('en-US');
+        const dateStrUK = expenseDate.toLocaleDateString('en-GB');
+        const isoDate = expense.date.split('T')[0];
+        
+        return (expense.vendorName && expense.vendorName.toLowerCase().includes(searchTerm.toLowerCase())) ||
+               (expense.description && expense.description.toLowerCase().includes(searchTerm.toLowerCase())) ||
+               eventName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+               dateStr.includes(searchTerm) ||
+               dateStrUS.includes(searchTerm) ||
+               dateStrUK.includes(searchTerm) ||
+               isoDate.includes(searchTerm);
+      });
       setFilteredExpenses(filtered);
+      
+      // Adjust current page if it exceeds filtered results
+      const maxPage = Math.ceil(filtered.length / itemsPerPage);
+      if (currentPage > maxPage && maxPage > 0) {
+        setCurrentPage(maxPage);
+      }
     }
-  }, [expenses, searchTerm]);
+  }, [expenses, searchTerm, events.length, currentPage, itemsPerPage]);
   console.log('Current userRole:', userRole, 'canEditDelete:', canEditDelete);
 
   if (loading) return <div className="p-4">Loading...</div>;
@@ -207,10 +224,10 @@ export default function ExpensePage() {
           {!showForm && (
             <input
               type="text"
-              placeholder="Search by category, vendor, or remarks..."
+              placeholder="Search by vendor, date, event, description..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500 w-64"
+              className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500 w-80"
             />
           )}
         <button
@@ -407,7 +424,6 @@ export default function ExpensePage() {
                   <div className="flex justify-between items-start mb-2">
                     <div>
                       <h3 className="font-medium text-gray-900">{expense.vendorName || 'N/A'}</h3>
-                      <p className="text-sm text-gray-500">{expense.category}</p>
                     </div>
                     <span className="text-lg font-semibold text-red-600">
                       ₹{parseFloat(expense.amount).toLocaleString()}
@@ -415,7 +431,10 @@ export default function ExpensePage() {
                   </div>
                   <div className="grid grid-cols-2 gap-2 text-sm text-gray-600">
                     <div>📅 {new Date(expense.date).toLocaleDateString()}</div>
-                    <div>🎪 {expense.eventId ? events.find(event => event.id === expense.eventId)?.name || '-' : '-'}</div>
+                    <div>🎪 {expense.eventId ? (() => {
+                      const eventName = events.find(event => event.id === expense.eventId)?.name || '-';
+                      return eventName.length > 15 ? eventName.substring(0, 15) + '...' : eventName;
+                    })() : '-'}</div>
                     <div className="col-span-2">📝 {expense.description || '-'}</div>
                   </div>
                   {canEditDelete && (

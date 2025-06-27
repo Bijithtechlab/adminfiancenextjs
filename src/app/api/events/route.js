@@ -68,6 +68,8 @@ export async function GET(request) {
         
         return {
           ...eventRow,
+          startDate: eventRow.date,
+          endDate: eventRow.end_date,
           total_income: actualIncome,
           total_expense: actualExpense,
           balance: balance
@@ -106,9 +108,9 @@ export async function POST(request) {
 
     const query = `
       INSERT INTO events (
-        id, name, description, date, budget, status, created_at, updated_at
+        id, name, description, date, end_date, budget, status, created_at, updated_at
       ) 
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
       RETURNING *
     `;
     
@@ -117,6 +119,7 @@ export async function POST(request) {
       name,
       description || '',
       startDate,
+      endDate || startDate,
       budget ? parseFloat(budget) : null,
       status || 'planned',
       timestamp,
