@@ -28,6 +28,8 @@ export default function IncomePage() {
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage] = useState(10);
   const [showCompact, setShowCompact] = useState(true);
+  const [sortField, setSortField] = useState('date');
+  const [sortDirection, setSortDirection] = useState('desc');
 
   useEffect(() => {
     fetchIncomes();
@@ -163,12 +165,48 @@ export default function IncomePage() {
   const canDelete = checkPermission('income', 'delete');
   const canCreate = checkPermission('income', 'create');
 
-  // Filter incomes based on search term
-  useEffect(() => {
-    if (!searchTerm) {
-      setFilteredIncomes(incomes);
+  const handleSort = (field) => {
+    if (sortField === field) {
+      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
     } else {
-      const filtered = incomes.filter(income => {
+      setSortField(field);
+      setSortDirection('asc');
+    }
+  };
+
+  // Sort and filter incomes
+  useEffect(() => {
+    let processedIncomes = [...incomes];
+    
+    // Sort first
+    processedIncomes.sort((a, b) => {
+      let aValue = a[sortField];
+      let bValue = b[sortField];
+      
+      if (sortField === 'amount') {
+        aValue = parseFloat(aValue) || 0;
+        bValue = parseFloat(bValue) || 0;
+      } else if (sortField === 'date') {
+        aValue = new Date(aValue);
+        bValue = new Date(bValue);
+      } else if (sortField === 'receiptNumber') {
+        aValue = parseInt(aValue) || 0;
+        bValue = parseInt(bValue) || 0;
+      } else {
+        aValue = String(aValue || '').toLowerCase();
+        bValue = String(bValue || '').toLowerCase();
+      }
+      
+      if (aValue < bValue) return sortDirection === 'asc' ? -1 : 1;
+      if (aValue > bValue) return sortDirection === 'asc' ? 1 : -1;
+      return 0;
+    });
+    
+    // Then filter
+    if (!searchTerm) {
+      setFilteredIncomes(processedIncomes);
+    } else {
+      const filtered = processedIncomes.filter(income => {
         const eventName = income.eventId ? events.find(event => event.id === income.eventId)?.name || '' : '';
         const incomeDate = new Date(income.date);
         const dateStr = incomeDate.toLocaleDateString();
@@ -195,7 +233,7 @@ export default function IncomePage() {
         setCurrentPage(maxPage);
       }
     }
-  }, [incomes, searchTerm, events.length, currentPage, itemsPerPage]);
+  }, [incomes, searchTerm, events.length, currentPage, itemsPerPage, sortField, sortDirection]);
 
   if (loading) return <div className="p-8">Loading...</div>;
 
@@ -516,17 +554,17 @@ export default function IncomePage() {
         <table className="min-w-full">
           <thead className="bg-gray-50">
             <tr>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Donor
+              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100" onClick={() => handleSort('donorName')}>
+                Donor {sortField === 'donorName' && (sortDirection === 'asc' ? '↑' : '↓')}
               </th>
               <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Phone
               </th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Amount
+              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100" onClick={() => handleSort('amount')}>
+                Amount {sortField === 'amount' && (sortDirection === 'asc' ? '↑' : '↓')}
               </th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Date
+              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100" onClick={() => handleSort('date')}>
+                Date {sortField === 'date' && (sortDirection === 'asc' ? '↑' : '↓')}
               </th>
               <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Event
@@ -534,8 +572,8 @@ export default function IncomePage() {
               <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Description
               </th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Receipt #
+              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100" onClick={() => handleSort('receiptNumber')}>
+                Receipt # {sortField === 'receiptNumber' && (sortDirection === 'asc' ? '↑' : '↓')}
               </th>
               {(canEdit || canDelete) && (
                 <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">

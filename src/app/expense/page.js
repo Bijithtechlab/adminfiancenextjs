@@ -17,6 +17,8 @@ export default function ExpensePage() {
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage] = useState(20);
   const [showCompact, setShowCompact] = useState(true);
+  const [sortField, setSortField] = useState('date');
+  const [sortDirection, setSortDirection] = useState('desc');
   const [formData, setFormData] = useState({
     category: 'Maintenance',
     amount: '',
@@ -173,12 +175,45 @@ export default function ExpensePage() {
   const canDelete = checkPermission('expense', 'delete');
   const canCreate = checkPermission('expense', 'create');
 
-  // Filter expenses based on search term
-  useEffect(() => {
-    if (!searchTerm) {
-      setFilteredExpenses(expenses);
+  const handleSort = (field) => {
+    if (sortField === field) {
+      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
     } else {
-      const filtered = expenses.filter(expense => {
+      setSortField(field);
+      setSortDirection('asc');
+    }
+  };
+
+  // Sort and filter expenses
+  useEffect(() => {
+    let processedExpenses = [...expenses];
+    
+    // Sort first
+    processedExpenses.sort((a, b) => {
+      let aValue = a[sortField];
+      let bValue = b[sortField];
+      
+      if (sortField === 'amount') {
+        aValue = parseFloat(aValue) || 0;
+        bValue = parseFloat(bValue) || 0;
+      } else if (sortField === 'date') {
+        aValue = new Date(aValue);
+        bValue = new Date(bValue);
+      } else {
+        aValue = String(aValue || '').toLowerCase();
+        bValue = String(bValue || '').toLowerCase();
+      }
+      
+      if (aValue < bValue) return sortDirection === 'asc' ? -1 : 1;
+      if (aValue > bValue) return sortDirection === 'asc' ? 1 : -1;
+      return 0;
+    });
+    
+    // Then filter
+    if (!searchTerm) {
+      setFilteredExpenses(processedExpenses);
+    } else {
+      const filtered = processedExpenses.filter(expense => {
         const eventName = expense.eventId ? events.find(event => event.id === expense.eventId)?.name || '' : '';
         const expenseDate = new Date(expense.date);
         const dateStr = expenseDate.toLocaleDateString();
@@ -202,7 +237,7 @@ export default function ExpensePage() {
         setCurrentPage(maxPage);
       }
     }
-  }, [expenses, searchTerm, events.length, currentPage, itemsPerPage]);
+  }, [expenses, searchTerm, events.length, currentPage, itemsPerPage, sortField, sortDirection]);
 
   if (loading) return <div className="p-4">Loading...</div>;
 
@@ -482,14 +517,14 @@ export default function ExpensePage() {
         <table className="min-w-full">
           <thead className="bg-gray-50">
             <tr>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Paid To
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100" onClick={() => handleSort('vendorName')}>
+                Paid To {sortField === 'vendorName' && (sortDirection === 'asc' ? '↑' : '↓')}
               </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Amount
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100" onClick={() => handleSort('amount')}>
+                Amount {sortField === 'amount' && (sortDirection === 'asc' ? '↑' : '↓')}
               </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Date
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100" onClick={() => handleSort('date')}>
+                Date {sortField === 'date' && (sortDirection === 'asc' ? '↑' : '↓')}
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Event Name
