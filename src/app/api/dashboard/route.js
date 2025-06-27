@@ -57,12 +57,12 @@ export async function GET(request) {
     const expenseResult = await db.query(expenseQuery, dateParams);
     const totalExpense = parseFloat(expenseResult.rows[0].total) || 0;
 
-    // Get recent income records
-    const recentIncomeQuery = `SELECT * FROM income ${dateCondition} ORDER BY date DESC LIMIT 5`;
+    // Get recent income records (most recently added)
+    const recentIncomeQuery = `SELECT * FROM income ${dateCondition} ORDER BY created_at DESC LIMIT 5`;
     const recentIncomeResult = await db.query(recentIncomeQuery, dateParams);
 
-    // Get recent expense records
-    const recentExpenseQuery = `SELECT * FROM expense ${dateCondition} ORDER BY date DESC LIMIT 5`;
+    // Get recent expense records (most recently added)
+    const recentExpenseQuery = `SELECT * FROM expense ${dateCondition} ORDER BY created_at DESC LIMIT 5`;
     const recentExpenseResult = await db.query(recentExpenseQuery, dateParams);
 
     // Get events summary
@@ -123,6 +123,7 @@ export async function GET(request) {
       recentIncome: recentIncomeResult.rows.map(income => ({
         id: income.id,
         donorName: income.donor_name,
+        houseName: income.house_name,
         amount: income.amount,
         date: income.date,
         donationType: income.donation_type,

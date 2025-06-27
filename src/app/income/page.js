@@ -446,6 +446,27 @@ export default function IncomePage() {
               {showCompact ? '📋 Detailed' : '📱 Compact'}
             </button>
           </div>
+          <div className="flex gap-2 items-center">
+            <span className="text-sm text-gray-600">Sort by:</span>
+            <select
+              value={`${sortField}-${sortDirection}`}
+              onChange={(e) => {
+                const [field, direction] = e.target.value.split('-');
+                setSortField(field);
+                setSortDirection(direction);
+              }}
+              className="text-sm border border-gray-300 rounded px-2 py-1"
+            >
+              <option value="date-desc">Date (Newest)</option>
+              <option value="date-asc">Date (Oldest)</option>
+              <option value="donorName-asc">Donor (A-Z)</option>
+              <option value="donorName-desc">Donor (Z-A)</option>
+              <option value="amount-desc">Amount (High-Low)</option>
+              <option value="amount-asc">Amount (Low-High)</option>
+              <option value="receiptNumber-asc">Receipt # (1-9)</option>
+              <option value="receiptNumber-desc">Receipt # (9-1)</option>
+            </select>
+          </div>
         </div>
         
         {/* Mobile Card View */}

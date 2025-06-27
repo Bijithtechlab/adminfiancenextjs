@@ -238,7 +238,8 @@ export default function DashboardPage() {
                 <div key={income.id} className="flex justify-between items-center p-3 bg-green-50 rounded">
                   <div>
                     <p className="font-medium text-gray-900">{income.donorName}</p>
-                    <p className="text-sm text-gray-600">
+                    <p className="text-sm text-gray-600">{income.houseName || ''}</p>
+                    <p className="text-xs text-gray-500">
                       {income.eventId && dashboardData.allEvents ? 
                         dashboardData.allEvents.find(event => event.id === income.eventId)?.name || income.donationType
                         : income.donationType
