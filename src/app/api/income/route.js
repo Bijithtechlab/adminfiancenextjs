@@ -143,6 +143,30 @@ export async function POST(request) {
     const result = await db.query(query, values);
     const newIncome = result.rows[0];
     
+    // Auto-save to address book if contact details are provided
+    if (donorName && (address || phoneNumber)) {
+      try {
+        // Check if exact combination of name AND phone already exists
+        const existingContact = await db.query(
+          'SELECT id FROM address_book WHERE person_name = $1 AND phone_number = $2',
+          [donorName, phoneNumber || '']
+        );
+        
+        if (existingContact.rows.length === 0) {
+          const contactId = uuidv4();
+          await db.query(`
+            INSERT INTO address_book (id, person_name, house_name, address, phone_number, category, notes, created_at, updated_at, created_by) 
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+          `, [
+            contactId, donorName, houseName || '', address || '', phoneNumber || '',
+            'donor', 'Auto-added from income record', timestamp, timestamp, user.id
+          ]);
+        }
+      } catch (contactError) {
+        console.log('Could not save to address book:', contactError.message);
+      }
+    }
+    
     const transformedIncome = {
       id: newIncome.id,
       userId: newIncome.user_id,

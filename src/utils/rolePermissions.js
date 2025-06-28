@@ -1,13 +1,13 @@
 // Role-based permissions
 export const rolePermissions = {
-  'admin': ['dashboard', 'income', 'expense', 'events', 'inventory', 'reports', 'users'],
-  'Admin': ['dashboard', 'income', 'expense', 'events', 'inventory', 'reports', 'users'],
-  'manager': ['dashboard', 'income', 'expense', 'events', 'inventory', 'reports'],
-  'Manager': ['dashboard', 'income', 'expense', 'events', 'inventory', 'reports'],
-  'accountant': ['dashboard', 'income', 'expense', 'reports'],
-  'Accountant': ['dashboard', 'income', 'expense', 'reports'],
-  'data-entry': ['dashboard', 'income'],
-  'Data Entry': ['dashboard', 'income']
+  'admin': ['dashboard', 'income', 'expense', 'events', 'inventory', 'address-book', 'reports', 'users'],
+  'Admin': ['dashboard', 'income', 'expense', 'events', 'inventory', 'address-book', 'reports', 'users'],
+  'manager': ['dashboard', 'income', 'expense', 'events', 'inventory', 'address-book', 'reports'],
+  'Manager': ['dashboard', 'income', 'expense', 'events', 'inventory', 'address-book', 'reports'],
+  'accountant': ['dashboard', 'income', 'expense', 'address-book', 'reports'],
+  'Accountant': ['dashboard', 'income', 'expense', 'address-book', 'reports'],
+  'data-entry': ['dashboard', 'income', 'address-book'],
+  'Data Entry': ['dashboard', 'income', 'address-book']
 };
 
 export const hasAccess = (userRole, page) => {

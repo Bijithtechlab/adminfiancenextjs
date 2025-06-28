@@ -62,6 +62,14 @@ export const PERMISSIONS = {
     audit: ['Super Admin', 'Admin']
   },
   
+  // Address Book permissions
+  'address-book': {
+    view: ['Super Admin', 'Admin', 'Manager', 'Accountant', 'Data Entry'],
+    create: ['Super Admin', 'Admin', 'Manager', 'Data Entry'],
+    edit: ['Super Admin', 'Admin', 'Manager'],
+    delete: ['Super Admin', 'Admin']
+  },
+  
   // Users permissions
   users: {
     view: ['Super Admin', 'Admin'],

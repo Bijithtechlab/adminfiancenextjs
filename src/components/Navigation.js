@@ -15,6 +15,7 @@ export default function Navigation() {
     { path: '/expense', label: 'Expense', icon: '💸', page: 'expense' },
     { path: '/events', label: 'Events', icon: '🎉', page: 'events' },
     { path: '/inventory', label: 'Inventory', icon: '📦', page: 'inventory' },
+    { path: '/address-book', label: 'Address Book', icon: '📞', page: 'address-book' },
     { path: '/reports', label: 'Reports', icon: '📈', page: 'reports' },
     { path: '/users', label: 'Users', icon: '👥', page: 'users' }
   ];
