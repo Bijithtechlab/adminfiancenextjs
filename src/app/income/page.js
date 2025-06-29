@@ -178,10 +178,10 @@ export default function IncomePage() {
     const exportData = filteredIncomes.map(income => {
       const eventName = income.eventId ? events.find(event => event.id === income.eventId)?.name || '-' : '-';
       return {
+        receiptNumber: income.receiptNumber || '-',
         donorName: income.donorName,
         houseName: income.houseName || '-',
         amount: `₹${parseFloat(income.amount).toLocaleString()}`,
-        eventName: eventName,
         description: income.description || '-'
       };
     });
@@ -207,22 +207,20 @@ export default function IncomePage() {
           <table>
             <thead>
               <tr>
-                <th>S.No</th>
+                <th>Receipt No</th>
                 <th>Donor Name</th>
                 <th>House Name</th>
                 <th>Amount</th>
-                <th>Event Name</th>
                 <th>Description</th>
               </tr>
             </thead>
             <tbody>
-              ${exportData.map((row, index) => `
+              ${exportData.map((row) => `
                 <tr>
-                  <td>${index + 1}</td>
+                  <td>${row.receiptNumber}</td>
                   <td>${row.donorName}</td>
                   <td>${row.houseName}</td>
                   <td>${row.amount}</td>
-                  <td>${row.eventName}</td>
                   <td>${row.description}</td>
                 </tr>
               `).join('')}
@@ -653,6 +651,9 @@ export default function IncomePage() {
         <table className="min-w-full">
           <thead className="bg-gray-50">
             <tr>
+              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100" onClick={() => handleSort('receiptNumber')}>
+                Receipt # {sortField === 'receiptNumber' && (sortDirection === 'asc' ? '↑' : '↓')}
+              </th>
               <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100" onClick={() => handleSort('donorName')}>
                 Donor {sortField === 'donorName' && (sortDirection === 'asc' ? '↑' : '↓')}
               </th>
@@ -671,9 +672,6 @@ export default function IncomePage() {
               <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Description
               </th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100" onClick={() => handleSort('receiptNumber')}>
-                Receipt # {sortField === 'receiptNumber' && (sortDirection === 'asc' ? '↑' : '↓')}
-              </th>
               {(canEdit || canDelete) && (
                 <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Actions
@@ -684,6 +682,9 @@ export default function IncomePage() {
           <tbody className="bg-white divide-y divide-gray-200">
             {filteredIncomes.map((income) => (
               <tr key={income.id}>
+                <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900">
+                  {income.receiptNumber || '-'}
+                </td>
                 <td className="px-4 py-4 text-sm font-medium text-gray-900">
                   <div className="font-medium">{income.donorName}</div>
                   <div className="text-xs text-gray-500">{income.houseName || ''}</div>
@@ -714,9 +715,6 @@ export default function IncomePage() {
                       : '-'
                     }
                   </div>
-                </td>
-                <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900">
-                  {income.receiptNumber || '-'}
                 </td>
                 {(canEdit || canDelete) && (
                   <td className="px-4 py-4 whitespace-nowrap text-sm font-medium">
