@@ -174,6 +174,76 @@ export default function IncomePage() {
     }
   };
 
+  const handleExport = () => {
+    const exportData = filteredIncomes.map(income => {
+      const eventName = income.eventId ? events.find(event => event.id === income.eventId)?.name || '-' : '-';
+      return {
+        donorName: income.donorName,
+        houseName: income.houseName || '-',
+        amount: `₹${parseFloat(income.amount).toLocaleString()}`,
+        eventName: eventName,
+        description: income.description || '-'
+      };
+    });
+    
+    // Create HTML content for PDF
+    const htmlContent = `
+      <html>
+        <head>
+          <title>Income Records</title>
+          <style>
+            body { font-family: Arial, sans-serif; margin: 20px; }
+            h1 { color: #333; text-align: center; }
+            table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+            th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+            th { background-color: #f2f2f2; font-weight: bold; }
+            .total { font-weight: bold; background-color: #f9f9f9; }
+          </style>
+        </head>
+        <body>
+          <h1>Periyakkamannil Donation Details - ${filteredIncomes.length > 0 && filteredIncomes[0].eventId ? events.find(event => event.id === filteredIncomes[0].eventId)?.name || 'All Events' : 'All Events'}</h1>
+          <p>Generated on: ${new Date().toLocaleDateString()}</p>
+          <p>Total Records: ${exportData.length}</p>
+          <table>
+            <thead>
+              <tr>
+                <th>S.No</th>
+                <th>Donor Name</th>
+                <th>House Name</th>
+                <th>Amount</th>
+                <th>Event Name</th>
+                <th>Description</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${exportData.map((row, index) => `
+                <tr>
+                  <td>${index + 1}</td>
+                  <td>${row.donorName}</td>
+                  <td>${row.houseName}</td>
+                  <td>${row.amount}</td>
+                  <td>${row.eventName}</td>
+                  <td>${row.description}</td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+          <div style="margin-top: 20px;">
+            <p class="total">Total Amount: ₹${filteredIncomes.reduce((sum, income) => sum + parseFloat(income.amount), 0).toLocaleString()}</p>
+          </div>
+        </body>
+      </html>
+    `;
+    
+    const printWindow = window.open('', '_blank');
+    printWindow.document.write(htmlContent);
+    printWindow.document.close();
+    printWindow.focus();
+    setTimeout(() => {
+      printWindow.print();
+    }, 250);
+  };
+
   // Sort and filter incomes
   useEffect(() => {
     let processedIncomes = [...incomes];
@@ -251,6 +321,14 @@ export default function IncomePage() {
               className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 w-80"
             />
           )}
+          <Permission module="income" action="export">
+            <button
+              onClick={handleExport}
+              className="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600 flex items-center gap-2"
+            >
+              🖨️ Print
+            </button>
+          </Permission>
         <Permission module="income" action="create">
           <button
             onClick={() => {

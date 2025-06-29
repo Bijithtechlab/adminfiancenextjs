@@ -184,6 +184,73 @@ export default function ExpensePage() {
     }
   };
 
+  const handleExport = () => {
+    const exportData = filteredExpenses.map(expense => {
+      const eventName = expense.eventId ? events.find(event => event.id === expense.eventId)?.name || '-' : '-';
+      return {
+        paidTo: expense.vendorName || '-',
+        date: new Date(expense.date).toLocaleDateString(),
+        amount: `₹${parseFloat(expense.amount).toLocaleString()}`,
+        eventName: eventName
+      };
+    });
+    
+    // Create HTML content for PDF
+    const htmlContent = `
+      <html>
+        <head>
+          <title>Expense Records</title>
+          <style>
+            body { font-family: Arial, sans-serif; margin: 20px; }
+            h1 { color: #333; text-align: center; }
+            table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+            th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+            th { background-color: #f2f2f2; font-weight: bold; }
+            .total { font-weight: bold; background-color: #f9f9f9; }
+          </style>
+        </head>
+        <body>
+          <h1>Expense Records Report</h1>
+          <p>Generated on: ${new Date().toLocaleDateString()}</p>
+          <p>Total Records: ${exportData.length}</p>
+          <table>
+            <thead>
+              <tr>
+                <th>S.No</th>
+                <th>Paid To</th>
+                <th>Date</th>
+                <th>Amount</th>
+                <th>Event Name</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${exportData.map((row, index) => `
+                <tr>
+                  <td>${index + 1}</td>
+                  <td>${row.paidTo}</td>
+                  <td>${row.date}</td>
+                  <td>${row.amount}</td>
+                  <td>${row.eventName}</td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+          <div style="margin-top: 20px;">
+            <p class="total">Total Amount: ₹${filteredExpenses.reduce((sum, expense) => sum + parseFloat(expense.amount), 0).toLocaleString()}</p>
+          </div>
+        </body>
+      </html>
+    `;
+    
+    const printWindow = window.open('', '_blank');
+    printWindow.document.write(htmlContent);
+    printWindow.document.close();
+    printWindow.focus();
+    setTimeout(() => {
+      printWindow.print();
+    }, 250);
+  };
+
   // Sort and filter expenses
   useEffect(() => {
     let processedExpenses = [...expenses];
@@ -256,6 +323,14 @@ export default function ExpensePage() {
               className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500 w-80"
             />
           )}
+          <Permission module="expense" action="export">
+            <button
+              onClick={handleExport}
+              className="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600 flex items-center gap-2"
+            >
+              🖨️ Print
+            </button>
+          </Permission>
         <Permission module="expense" action="create">
           <button
             onClick={() => {
